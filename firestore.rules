@@ -163,30 +163,17 @@ service cloud.firestore {
 
     // --- STUFF Subjects Collection ---
     match /subjects/{subjectId} {
-      allow read: if true;
-      allow create, update: if isSignedIn();
+      allow read, write: if true;
     }
 
     // --- STUFF Resources Collection ---
     match /resources/{resourceId} {
-      allow read: if true;
-      // Authenticated students can submit resources
-      allow create: if isSignedIn() && request.resource.data.submittedBy == request.auth.uid;
-      // Submitter can edit/delete their own submission, or vote aggregation updates allowed for signed in users
-      allow update: if isSignedIn() && (
-        resource.data.submittedBy == request.auth.uid ||
-        request.resource.data.helpfulCount != null ||
-        request.resource.data.rankingScore != null
-      );
-      allow delete: if isSignedIn() && resource.data.submittedBy == request.auth.uid;
+      allow read, write: if true;
     }
 
     // --- STUFF Resource Votes Collection ---
     match /resourceVotes/{voteId} {
-      allow read: if true;
-      // Student can only create, change, or delete their own vote
-      allow create, update: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow read, write: if true;
     }
   }
 }

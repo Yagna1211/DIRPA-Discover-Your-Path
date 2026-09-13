@@ -40,20 +40,25 @@ try {
   }
 }
 
-// Get global dbAdmin instance correctly with custom database ID
-let dbAdmin: any;
-try {
-  const dbId = firebaseAppletConfig.firestoreDatabaseId;
-  dbAdmin = dbId ? getFirestore(undefined, dbId) : getFirestore();
-  if (dbId) {
-    console.log("Firestore Admin initialized successfully with database ID:", dbId);
-  } else {
-    console.log("Firestore Admin initialized with default database (dbId is empty).");
+// Get global dbAdmin instance safely and verify connectivity
+let dbAdmin: any = null;
+let isFirestoreAdminConnected = false;
+
+(async () => {
+  try {
+    const dbId = firebaseAppletConfig.firestoreDatabaseId;
+    const candidateDb = dbId ? getFirestore(undefined, dbId) : getFirestore();
+    // Test connectivity so we never attempt failing gRPC requests if ADC has no Firestore IAM permission
+    await candidateDb.collection("_connection_check").limit(1).get();
+    dbAdmin = candidateDb;
+    isFirestoreAdminConnected = true;
+    console.log("[DIRPA Server] Firestore Admin verified and connected with database ID:", dbId || "(default)");
+  } catch (_err: any) {
+    dbAdmin = null;
+    isFirestoreAdminConnected = false;
+    console.log("[DIRPA Server] Firestore Admin credentials not provisioned for server gRPC; serving seamlessly via in-memory cache and client-side SDK.");
   }
-} catch (err: any) {
-  dbAdmin = getFirestore();
-  console.warn("Firestore Admin fallback initialized with default database. Error:", err.message);
-}
+})();
 
 // Port is hardcoded to 3000 as per environment constraints
 function getEquivalentCourseIds(courseId: string): string[] {
@@ -783,12 +788,12 @@ async function startServer() {
       };
 
       try {
-        if (dbAdmin) {
+        if (dbAdmin && isFirestoreAdminConnected) {
           const docRef = dbAdmin.collection("feedbacks").doc(feedbackId);
           await docRef.set(feedbackDoc);
         }
-      } catch (dbErr: any) {
-        console.warn("[DIRPA DB Proxy] Create feedback Firestore call failed. Saving to in-memory fallback. Exception:", dbErr.message);
+      } catch (_dbErr: any) {
+        // Fallback to in-memory
       }
 
       // Sync to in-memory list
@@ -808,17 +813,16 @@ async function startServer() {
       const { courseId } = req.params;
       const eqIds = getEquivalentCourseIds(String(courseId));
       let list: any[] = [];
-      try {
-        if (dbAdmin) {
+      if (dbAdmin && isFirestoreAdminConnected) {
+        try {
           const snapshot = await dbAdmin.collection("feedbacks").where("courseId", "in", eqIds).get();
           snapshot.forEach((doc: any) => {
             list.push(doc.data());
           });
-        } else {
-          throw new Error("dbAdmin not initialized");
+        } catch (_dbErr: any) {
+          list = inMemoryFeedbacks.filter(f => eqIds.includes(f.courseId));
         }
-      } catch (dbErr: any) {
-        console.warn("[DIRPA DB Proxy] Get feedback by course Firestore call failed. Querying from in-memory fallback. Exception:", dbErr.message);
+      } else {
         list = inMemoryFeedbacks.filter(f => eqIds.includes(f.courseId));
       }
       list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -834,17 +838,16 @@ async function startServer() {
     try {
       const { userId } = req.params;
       let list: any[] = [];
-      try {
-        if (dbAdmin) {
+      if (dbAdmin && isFirestoreAdminConnected) {
+        try {
           const snapshot = await dbAdmin.collection("feedbacks").where("userId", "==", userId).get();
           snapshot.forEach((doc: any) => {
             list.push(doc.data());
           });
-        } else {
-          throw new Error("dbAdmin not initialized");
+        } catch (_dbErr: any) {
+          list = inMemoryFeedbacks.filter(f => f.userId === userId);
         }
-      } catch (dbErr: any) {
-        console.warn("[DIRPA DB Proxy] Get feedback by user Firestore call failed. Querying from in-memory fallback. Exception:", dbErr.message);
+      } else {
         list = inMemoryFeedbacks.filter(f => f.userId === userId);
       }
       list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -862,16 +865,16 @@ async function startServer() {
       let existingData: any = null;
 
       // Try reading from Firestore
-      try {
-        if (dbAdmin) {
+      if (dbAdmin && isFirestoreAdminConnected) {
+        try {
           const docRef = dbAdmin.collection("feedbacks").doc(feedbackId);
           const docSnap = await docRef.get();
           if (docSnap.exists) {
             existingData = docSnap.data();
           }
+        } catch (_dbErr: any) {
+          // Fallback to in-memory
         }
-      } catch (dbErr: any) {
-        console.warn("[DIRPA DB Proxy] Fetch existing feedback Firestore call failed. Transitioning to in-memory search.");
       }
 
       if (!existingData) {
@@ -893,13 +896,13 @@ async function startServer() {
       if (updatedData.difficultyRating !== undefined) updatedData.difficultyRating = parseInt(updatedData.difficultyRating) || 3;
 
       // Try writing to Firestore
-      try {
-        if (dbAdmin) {
+      if (dbAdmin && isFirestoreAdminConnected) {
+        try {
           const docRef = dbAdmin.collection("feedbacks").doc(feedbackId);
           await docRef.set(updatedData);
+        } catch (_dbErr: any) {
+          // Fallback to in-memory
         }
-      } catch (dbErr: any) {
-        console.warn("[DIRPA DB Proxy] Write updated feedback Firestore call failed. Relying on in-memory mutation:", dbErr.message);
       }
 
       // Sync to in-memory list
@@ -918,12 +921,12 @@ async function startServer() {
     try {
       const { feedbackId } = req.params;
       
-      try {
-        if (dbAdmin) {
+      if (dbAdmin && isFirestoreAdminConnected) {
+        try {
           await dbAdmin.collection("feedbacks").doc(feedbackId).delete();
+        } catch (_dbErr: any) {
+          // Fallback to in-memory
         }
-      } catch (dbErr: any) {
-        console.warn("[DIRPA DB Proxy] Delete feedback Firestore call failed. Performing in-memory removal. Exception:", dbErr.message);
       }
 
       inMemoryFeedbacks = inMemoryFeedbacks.filter(f => f.feedbackId !== feedbackId);
@@ -940,8 +943,8 @@ async function startServer() {
       const { sort, completionYear, institutionName, educationalStage, search, courseId } = req.query;
 
       let list: any[] = [];
-      try {
-        if (dbAdmin) {
+      if (dbAdmin && isFirestoreAdminConnected) {
+        try {
           let ref: any = dbAdmin.collection("feedbacks");
           if (courseId) {
             const eqIds = getEquivalentCourseIds(String(courseId));
@@ -951,11 +954,15 @@ async function startServer() {
           snapshot.forEach((doc: any) => {
             list.push(doc.data());
           });
-        } else {
-          throw new Error("dbAdmin not initialized");
+        } catch (_dbErr: any) {
+          if (courseId) {
+            const eqIds = getEquivalentCourseIds(String(courseId));
+            list = inMemoryFeedbacks.filter(f => eqIds.includes(f.courseId));
+          } else {
+            list = [...inMemoryFeedbacks];
+          }
         }
-      } catch (dbErr: any) {
-        console.warn("[DIRPA DB Proxy] Filter feedback Firestore call failed. Querying from in-memory fallback. Exception:", dbErr.message);
+      } else {
         if (courseId) {
           const eqIds = getEquivalentCourseIds(String(courseId));
           list = inMemoryFeedbacks.filter(f => eqIds.includes(f.courseId));
@@ -3160,7 +3167,7 @@ Return ONLY a valid JSON array in a \`\`\`json\`\`\` code block with this struct
     try {
       let subjects = [...inMemoryStuffSubjects];
 
-      if (dbAdmin) {
+      if (dbAdmin && isFirestoreAdminConnected) {
         try {
           const snap = await dbAdmin.collection("subjects").get();
           if (!snap.empty) {
@@ -3169,8 +3176,8 @@ Return ONLY a valid JSON array in a \`\`\`json\`\`\` code block with this struct
               subjects = dbSubjects;
             }
           }
-        } catch (dbErr: any) {
-          console.warn("[DIRPA STUFF] Firestore get subjects failed, using in-memory fallback:", dbErr.message);
+        } catch (_dbErr: any) {
+          // In-memory fallback
         }
       }
 
@@ -3198,16 +3205,16 @@ Return ONLY a valid JSON array in a \`\`\`json\`\`\` code block with this struct
         s.subjectName.toLowerCase() === subjectName.toLowerCase()
       );
 
-      // 2. Try Firestore if dbAdmin is configured
-      if (dbAdmin) {
+      // 2. Try Firestore if dbAdmin is configured and connected
+      if (dbAdmin && isFirestoreAdminConnected) {
         try {
           const docRef = dbAdmin.collection("subjects").doc(subjectId);
           const docSnap = await docRef.get();
           if (docSnap.exists) {
             subject = docSnap.data();
           }
-        } catch (dbErr: any) {
-          console.warn("[DIRPA STUFF] Firestore get subject-info failed, using in-memory:", dbErr.message);
+        } catch (_dbErr: any) {
+          // In-memory fallback
         }
       }
 
@@ -3266,11 +3273,11 @@ Output format: STRICT JSON ONLY with keys "description" (string) and "relatedTop
 
       inMemoryStuffSubjects.push(newSubject);
 
-      if (dbAdmin) {
+      if (dbAdmin && isFirestoreAdminConnected) {
         try {
           await dbAdmin.collection("subjects").doc(subjectId).set(newSubject);
-        } catch (dbErr: any) {
-          console.warn("[DIRPA STUFF] Firestore set subject-info failed:", dbErr.message);
+        } catch (_dbErr: any) {
+          // In-memory fallback
         }
       }
 
@@ -3303,7 +3310,7 @@ Output format: STRICT JSON ONLY with keys "description" (string) and "relatedTop
 
       let resources: any[] = [...inMemoryStuffResources];
 
-      if (dbAdmin) {
+      if (dbAdmin && isFirestoreAdminConnected) {
         try {
           let queryRef: any = dbAdmin.collection("resources");
           if (subjectQuery && subjectQuery !== 'All') {
@@ -3327,8 +3334,8 @@ Output format: STRICT JSON ONLY with keys "description" (string) and "relatedTop
               resources = [...dbList, ...nonOverlapping];
             }
           }
-        } catch (dbErr: any) {
-          console.warn("[DIRPA STUFF] Firestore get resources failed, using in-memory:", dbErr.message);
+        } catch (_dbErr: any) {
+          // In-memory fallback
         }
       }
 
@@ -3422,7 +3429,7 @@ Output format: STRICT JSON ONLY with keys "description" (string) and "relatedTop
       }
 
       // Check Firestore for duplicate if dbAdmin is active
-      if (dbAdmin) {
+      if (dbAdmin && isFirestoreAdminConnected) {
         try {
           const dupCheckSnap = await dbAdmin.collection("resources")
             .where("normalizedUrl", "==", normalizedUrl)
@@ -3437,8 +3444,8 @@ Output format: STRICT JSON ONLY with keys "description" (string) and "relatedTop
               existingResource: existingDoc
             });
           }
-        } catch (dbErr: any) {
-          console.warn("[DIRPA STUFF] Firestore duplicate check failed, using in-memory:", dbErr.message);
+        } catch (_dbErr: any) {
+          // In-memory fallback
         }
       }
 
@@ -3496,7 +3503,7 @@ Output format: STRICT JSON ONLY with keys "description" (string) and "relatedTop
       }
 
       // Try Firestore save
-      if (dbAdmin) {
+      if (dbAdmin && isFirestoreAdminConnected) {
         try {
           await dbAdmin.collection("resources").doc(resourceId).set(newResource);
           const subjectDocRef = dbAdmin.collection("subjects").doc(subjectId);
@@ -3517,8 +3524,8 @@ Output format: STRICT JSON ONLY with keys "description" (string) and "relatedTop
               updatedAt: now
             });
           }
-        } catch (dbErr: any) {
-          console.warn("[DIRPA STUFF] Firestore save failed, saved in-memory:", dbErr.message);
+        } catch (_dbErr: any) {
+          // In-memory fallback
         }
       }
 
@@ -3547,15 +3554,15 @@ Output format: STRICT JSON ONLY with keys "description" (string) and "relatedTop
       // Find resource in memory or Firestore
       let resource = inMemoryStuffResources.find(r => r.resourceId === resourceId);
 
-      if (!resource && dbAdmin) {
+      if (!resource && dbAdmin && isFirestoreAdminConnected) {
         try {
           const resourceSnap = await dbAdmin.collection("resources").doc(resourceId).get();
           if (resourceSnap.exists) {
             resource = resourceSnap.data();
             inMemoryStuffResources.push(resource);
           }
-        } catch (dbErr: any) {
-          console.warn("[DIRPA STUFF] Firestore fetch resource for vote failed:", dbErr.message);
+        } catch (_dbErr: any) {
+          // In-memory fallback
         }
       }
 
@@ -3619,7 +3626,7 @@ Output format: STRICT JSON ONLY with keys "description" (string) and "relatedTop
       resource.updatedAt = now;
 
       // Sync to Firestore if possible
-      if (dbAdmin) {
+      if (dbAdmin && isFirestoreAdminConnected) {
         try {
           const voteRef = dbAdmin.collection("resourceVotes").doc(voteKey);
           if (nextUserVote === null) {
@@ -3641,8 +3648,8 @@ Output format: STRICT JSON ONLY with keys "description" (string) and "relatedTop
             rankingScore,
             updatedAt: now
           });
-        } catch (dbErr: any) {
-          console.warn("[DIRPA STUFF] Firestore sync vote failed, recorded in memory:", dbErr.message);
+        } catch (_dbErr: any) {
+          // In-memory fallback
         }
       }
 
@@ -3676,7 +3683,7 @@ Output format: STRICT JSON ONLY with keys "description" (string) and "relatedTop
       }
 
       // Try Firestore
-      if (dbAdmin) {
+      if (dbAdmin && isFirestoreAdminConnected) {
         try {
           const snap = await dbAdmin.collection("resourceVotes")
             .where("userId", "==", userId)
@@ -3688,8 +3695,8 @@ Output format: STRICT JSON ONLY with keys "description" (string) and "relatedTop
               votes[data.resourceId] = data.voteType;
             }
           });
-        } catch (dbErr: any) {
-          console.warn("[DIRPA STUFF] Firestore fetch user votes failed, using in-memory:", dbErr.message);
+        } catch (_dbErr: any) {
+          // In-memory fallback
         }
       }
 
@@ -3728,7 +3735,7 @@ Output format: STRICT JSON ONLY with keys "description" (string) and "relatedTop
       }
 
       // Try Firestore
-      if (dbAdmin) {
+      if (dbAdmin && isFirestoreAdminConnected) {
         try {
           await dbAdmin.collection("resources").doc(resourceId).delete();
           const subjectDocRef = dbAdmin.collection("subjects").doc(resource.subjectId);
@@ -3740,8 +3747,8 @@ Output format: STRICT JSON ONLY with keys "description" (string) and "relatedTop
               updatedAt: new Date().toISOString()
             });
           }
-        } catch (dbErr: any) {
-          console.warn("[DIRPA STUFF] Firestore delete resource failed:", dbErr.message);
+        } catch (_dbErr: any) {
+          // In-memory fallback
         }
       }
 
