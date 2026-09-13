@@ -1,0 +1,350 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile record that contains custom details, roles, strengths, and saved educational paths.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "The unique user identifier matching Firebase Auth UID." },
+        "name": { "type": "string", "description": "The display name of the student or alumnus." },
+        "email": { "type": "string", "description": "Email address of the user." },
+        "avatar": { "type": "string", "description": "Emoji or URL representation of the user avatar." },
+        "role": { "type": "string", "enum": ["student", "alumni"], "description": "Role selection." },
+        "bio": { "type": "string", "description": "Self-description or academic background." },
+        "interests": { "type": "array", "description": "Selected interests." },
+        "strengths": { "type": "array", "description": "Selected student strengths." },
+        "careerGoal": { "type": "string", "description": "Target job or professional domain." },
+        "savedPathIds": { "type": "array", "description": "List of bookmarked pathway keys." },
+        "savedAlumniIds": { "type": "array", "description": "List of bookmarked alumni advisor keys." },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "email", "role"]
+    },
+    "Bookmark": {
+      "title": "Bookmark Entry",
+      "description": "Indicates a bookmarked path item by a particular user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "pathId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "pathId"]
+    },
+    "Review": {
+      "title": "Pathway Review",
+      "description": "Review written by verified graduate alumni about a specific career pathway.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique comment identifier." },
+        "pathwayId": { "type": "string", "description": "The target pathway being commented on." },
+        "name": { "type": "string", "description": "Name of the review author." },
+        "role": { "type": "string", "description": "Title or professional position of the author." },
+        "avatar": { "type": "string", "description": "Emoji or photo avatar." },
+        "experience": { "type": "string", "description": "Detailed learning experience reflection." },
+        "advice": { "type": "string", "description": "Practical advice to future students." },
+        "authorEmail": { "type": "string", "description": "Verified author email string." },
+        "rating": { "type": "integer" },
+        "likes": { "type": "integer" },
+        "replies": { "type": "array" },
+        "userId": { "type": "string", "description": "User UID who posted the review." },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "pathwayId", "name", "experience", "userId"]
+    },
+    "Conversation": {
+      "title": "Chat Conversation Thread",
+      "description": "Conversation representation between a student and an alumni mentor.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique thread key." },
+        "userId": { "type": "string", "description": "Student user ID." },
+        "alumniId": { "type": "string", "description": "Alumni user ID." },
+        "alumniName": { "type": "string" },
+        "alumniAvatar": { "type": "string" },
+        "alumniRole": { "type": "string" },
+        "lastMessage": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "alumniId"]
+    },
+    "Message": {
+      "title": "Chat Message Element",
+      "description": "A single text message inside a conversation collection stack.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "senderAvatar": { "type": "string" },
+        "text": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "isRead": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "senderId", "text", "timestamp"]
+    },
+    "Feedback": {
+      "title": "Alumni Feedback",
+      "description": "Feedback entry provided by verified alumni regarding courses, colleges, pathways, and career outcomes.",
+      "type": "object",
+      "properties": {
+        "feedbackId": { "type": "string" },
+        "userId": { "type": "string" },
+        "courseId": { "type": "string" },
+        "courseName": { "type": "string" },
+        "educationalStage": { "type": "string" },
+        "institutionName": { "type": "string" },
+        "completionYear": { "type": "string" },
+        "feedbackText": { "type": "string" },
+        "difficultyRating": { "type": "integer" },
+        "overallRating": { "type": "integer" },
+        "skillsLearned": { "type": "string" },
+        "likedMost": { "type": "string" },
+        "challengesFaced": { "type": "string" },
+        "careerOutcome": { "type": "string" },
+        "advice": { "type": "string" },
+        "currentJobRole": { "type": "string" },
+        "companyName": { "type": "string" },
+        "yearsOfExperience": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "feedbackId",
+        "userId",
+        "courseId",
+        "courseName",
+        "educationalStage",
+        "institutionName",
+        "completionYear",
+        "feedbackText",
+        "difficultyRating",
+        "overallRating"
+      ]
+    },
+    "FlowchartFeedback": {
+      "title": "Flowchart Career Feedback",
+      "description": "User reports or suggestions regarding inaccurate, outdated, or missing links on progression flowcharts.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "userName": { "type": "string" },
+        "pathwayId": { "type": "string" },
+        "pathwayName": { "type": "string" },
+        "feedbackType": { "type": "string" },
+        "feedbackText": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id",
+        "pathwayId",
+        "pathwayName",
+        "feedbackType",
+        "feedbackText"
+      ]
+    },
+    "PlatformReview": {
+      "title": "Platform Review",
+      "description": "General DIRPA platform testimonial or feedback submitted from profile or platform prompt.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "avatar": { "type": "string" },
+        "educationalStage": { "type": "string" },
+        "feedbackText": { "type": "string" },
+        "overallRating": { "type": "integer" },
+        "type": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId",
+        "name",
+        "feedbackText",
+        "overallRating"
+      ]
+    },
+    "Illustration": {
+      "title": "Illustration Asset",
+      "description": "Pre-seeded custom avatar illustrations metadata.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string" },
+        "badge": { "type": "string" },
+        "description": { "type": "string" },
+        "url": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "url"]
+    },
+    "Scholarship": {
+      "title": "Scholarship Opportunity",
+      "description": "Verified scholarship listing provided by government, university, or private organizations.",
+      "type": "object",
+      "properties": {
+        "scholarshipId": { "type": "string" },
+        "scholarshipName": { "type": "string" },
+        "provider": { "type": "string" },
+        "providerType": { "type": "string", "enum": ["Government", "Private", "NGO", "University"] },
+        "description": { "type": "string" },
+        "eligibility": { "type": "string" },
+        "educationLevel": { "type": "string" },
+        "eligibleCourses": { "type": "array" },
+        "eligibleStates": { "type": "array" },
+        "category": { "type": "string" },
+        "gender": { "type": "string" },
+        "minimumPercentage": { "type": "number" },
+        "maximumFamilyIncome": { "type": "number" },
+        "scholarshipAmount": { "type": "string" },
+        "applicationStartDate": { "type": "string" },
+        "applicationEndDate": { "type": "string" },
+        "documentsRequired": { "type": "array" },
+        "selectionProcess": { "type": "string" },
+        "renewalAvailable": { "type": "boolean" },
+        "officialWebsite": { "type": "string" },
+        "applicationLink": { "type": "string" },
+        "status": { "type": "string", "enum": ["Open", "Closed", "Draft", "Archived"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["scholarshipId", "scholarshipName", "provider", "scholarshipAmount", "status"]
+    },
+    "SavedScholarship": {
+      "title": "Saved Scholarship Bookmark",
+      "description": "Bookmarks of scholarships saved by students.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "scholarshipId": { "type": "string" },
+        "scholarshipName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "scholarshipId"]
+    },
+    "StuffSubject": {
+      "title": "Learning Subject",
+      "description": "Academic or technical subject in the STUFF resource discovery library.",
+      "type": "object",
+      "properties": {
+        "subjectId": { "type": "string" },
+        "subjectName": { "type": "string" },
+        "description": { "type": "string" },
+        "relatedTopics": { "type": "array" },
+        "resourcesCount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["subjectId", "subjectName"]
+    },
+    "StuffResource": {
+      "title": "Student Learning Resource",
+      "description": "Student-submitted learning resource with community feedback ratings.",
+      "type": "object",
+      "properties": {
+        "resourceId": { "type": "string" },
+        "subjectId": { "type": "string" },
+        "subjectName": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "recommendationReason": { "type": "string" },
+        "url": { "type": "string" },
+        "normalizedUrl": { "type": "string" },
+        "resourceType": { "type": "string", "enum": ["Videos", "Web Resources", "Practice", "Documentation", "Courses"] },
+        "platform": { "type": "string" },
+        "submittedBy": { "type": "string" },
+        "submittedByName": { "type": "string" },
+        "helpfulCount": { "type": "number" },
+        "notHelpfulCount": { "type": "number" },
+        "totalVotes": { "type": "number" },
+        "rankingScore": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "verified": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["resourceId", "subjectId", "title", "url", "normalizedUrl", "resourceType", "submittedBy"]
+    },
+    "StuffVote": {
+      "title": "Resource Vote",
+      "description": "Individual community vote cast on a learning resource.",
+      "type": "object",
+      "properties": {
+        "voteId": { "type": "string" },
+        "resourceId": { "type": "string" },
+        "userId": { "type": "string" },
+        "voteType": { "type": "string", "enum": ["helpful", "not_helpful"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["voteId", "resourceId", "userId", "voteType"]
+    }
+  },
+  "firestore": {
+    "/subjects/{subjectId}": {
+      "schema": "StuffSubject",
+      "description": "Subjects and topics in the STUFF platform."
+    },
+    "/resources/{resourceId}": {
+      "schema": "StuffResource",
+      "description": "Community-evaluated learning resources."
+    },
+    "/resourceVotes/{voteId}": {
+      "schema": "StuffVote",
+      "description": "Student votes on learning resources."
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Student and alumni user profiles."
+    },
+    "/bookmarks/{bookmarkId}": {
+      "schema": "Bookmark",
+      "description": "Pathway items saved across accounts."
+    },
+    "/reviews/{reviewId}": {
+      "schema": "Review",
+      "description": "Structured pathway evaluations."
+    },
+    "/conversations/{conversationId}": {
+      "schema": "Conversation",
+      "description": "Direct chat sessions."
+    },
+    "/conversations/{conversationId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Individual messages sent during active sessions."
+    },
+    "/feedbacks/{feedbackId}": {
+      "schema": "Feedback",
+      "description": "Alumni feedback on courses, colleges, pathways, and jobs."
+    },
+    "/platform_reviews/{reviewId}": {
+      "schema": "PlatformReview",
+      "description": "Platform-level user reviews displayed on the homepage marquee."
+    },
+    "/flowchart_feedbacks/{reportId}": {
+      "schema": "FlowchartFeedback",
+      "description": "User reports on inaccurate or missing pathway connections in the flowchart."
+    },
+    "/illustrations/{illustrationId}": {
+      "schema": "Illustration",
+      "description": "Custom avatar illustrations catalog."
+    },
+    "/scholarships/{scholarshipId}": {
+      "schema": "Scholarship",
+      "description": "Verified scholarship directory records."
+    },
+    "/saved_scholarships/{savedId}": {
+      "schema": "SavedScholarship",
+      "description": "User saved/bookmarked scholarships."
+    }
+  }
+}

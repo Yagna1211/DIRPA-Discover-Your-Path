@@ -1,0 +1,192 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default catch-all deny rule
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // --- Users Collection ---
+    match /users/{userId} {
+      allow get: if true;
+      allow list: if isSignedIn();
+      
+      allow create: if (
+                      isOwner(userId)
+                      && request.resource.data.id == userId
+                      && request.resource.data.email != null
+                      && request.resource.data.email is string
+                      && request.resource.data.email != ""
+                      && request.resource.data.name != null
+                      && request.resource.data.name is string
+                      && request.resource.data.name != ""
+                      && request.resource.data.name.size() < 100
+                      && request.resource.data.role != null
+                      && request.resource.data.role is string
+                      && request.resource.data.role in ['student', 'alumni']
+                    ) || (
+                      isSignedIn()
+                      && (request.resource.data.role == null || request.resource.data.role in ['student', 'alumni'])
+                    );
+
+      allow update: if (
+                      isOwner(userId)
+                      && request.resource.data.id == resource.data.id
+                      && request.resource.data.email == resource.data.email
+                      && request.resource.data.role == resource.data.role
+                      && request.resource.data.name != null
+                      && request.resource.data.name is string
+                      && request.resource.data.name != ""
+                      && request.resource.data.name.size() < 100
+                    ) || (
+                      isSignedIn()
+                      && (request.resource.data.role == null || request.resource.data.role in ['student', 'alumni'])
+                    );
+
+      allow delete: if isOwner(userId)
+                    || (
+                      isSignedIn()
+                      && (
+                        userId.size() >= 7 
+                        && (userId.matches('(?i)^alumni_.*') || userId.matches('(?i)^db_insight_.*'))
+                      )
+                    );
+    }
+
+    // --- Blocked Users Collection ---
+    match /blocked_users/{blockedId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    // --- Bookmarks Collection ---
+    match /bookmarks/{bookmarkId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // --- Reviews Collection ---
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isSignedIn() && (request.resource.data.userId == request.auth.uid || request.resource.data.userId == request.auth.token.email);
+      allow update: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || 
+        resource.data.userId == request.auth.token.email ||
+        (resource.data.authorEmail != null && resource.data.authorEmail == request.auth.token.email) ||
+        request.resource.data.likes != null || 
+        request.resource.data.replies != null
+      );
+      allow delete: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || 
+        resource.data.userId == request.auth.token.email ||
+        (resource.data.authorEmail != null && resource.data.authorEmail == request.auth.token.email)
+      );
+    }
+
+    // --- Feedbacks Collection ---
+    match /feedbacks/{feedbackId} {
+      allow read: if true;
+      allow create: if isSignedIn() || (request.resource.data.userId != null);
+      allow update: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || 
+        resource.data.userId == request.auth.token.email ||
+        (resource.data.authorEmail != null && resource.data.authorEmail == request.auth.token.email) ||
+        request.resource.data.likes != null || 
+        request.resource.data.replies != null
+      );
+      allow delete: if isSignedIn();
+    }
+
+    // --- Platform Reviews Collection ---
+    match /platform_reviews/{reviewId} {
+      allow read: if true;
+      allow create: if true;
+      allow update: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || 
+        resource.data.userId == request.auth.token.email
+      );
+      allow delete: if isSignedIn();
+    }
+
+    // --- Flowchart Feedbacks Collection ---
+    match /flowchart_feedbacks/{reportId} {
+      allow read: if isSignedIn();
+      allow create: if true;
+      allow update, delete: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || 
+        resource.data.userEmail == request.auth.token.email
+      );
+    }
+
+    // --- Conversations Collection ---
+    match /conversations/{conversationId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || resource.data.alumniId == request.auth.uid);
+      allow create: if isSignedIn() && (request.resource.data.userId == request.auth.uid || request.resource.data.alumniId == request.auth.uid);
+      allow update: if isSignedIn() && (resource.data.userId == request.auth.uid || resource.data.alumniId == request.auth.uid);
+      allow delete: if isSignedIn() && (resource.data.userId == request.auth.uid || resource.data.alumniId == request.auth.uid);
+
+      // --- Messages Sub-Collection ---
+      match /messages/{messageId} {
+        allow read, write: if isSignedIn();
+      }
+    }
+
+    // --- Illustrations Collection ---
+    match /illustrations/{illustrationId} {
+      allow read, write: if true;
+    }
+
+    // --- Scholarships Collection ---
+    match /scholarships/{scholarshipId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if isSignedIn();
+    }
+
+    // --- Saved Scholarships Collection ---
+    match /saved_scholarships/{savedId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // --- STUFF Subjects Collection ---
+    match /subjects/{subjectId} {
+      allow read: if true;
+      allow create, update: if isSignedIn();
+    }
+
+    // --- STUFF Resources Collection ---
+    match /resources/{resourceId} {
+      allow read: if true;
+      // Authenticated students can submit resources
+      allow create: if isSignedIn() && request.resource.data.submittedBy == request.auth.uid;
+      // Submitter can edit/delete their own submission, or vote aggregation updates allowed for signed in users
+      allow update: if isSignedIn() && (
+        resource.data.submittedBy == request.auth.uid ||
+        request.resource.data.helpfulCount != null ||
+        request.resource.data.rankingScore != null
+      );
+      allow delete: if isSignedIn() && resource.data.submittedBy == request.auth.uid;
+    }
+
+    // --- STUFF Resource Votes Collection ---
+    match /resourceVotes/{voteId} {
+      allow read: if true;
+      // Student can only create, change, or delete their own vote
+      allow create, update: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+  }
+}

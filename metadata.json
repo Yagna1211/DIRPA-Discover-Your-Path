@@ -1,0 +1,6 @@
+{
+  "name": "DIRPA---Discover-Your-Path",
+  "description": "An AI-powered academic and career guidance platform with interactive roadmaps, real-time verified Bullets feed, STUFF student-powered learning resource discovery, entrance exam intelligence, scholarship discovery, and company hiring directories.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
