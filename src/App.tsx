@@ -7006,9 +7006,7 @@ export default function App() {
 
         {/* Desktop & Tablet Navigation Elements (md:flex) */}
         <div className="hidden md:flex items-center gap-3">
-          {currentView !== 'landing' && (
-            <LanguageSwitcher variant="header" isDarkMode={isDarkMode} />
-          )}
+          <LanguageSwitcher variant="header" isDarkMode={isDarkMode} />
           {user ? (
             <div className="flex items-center gap-6 md:gap-10">
               <ul className="flex gap-8 text-[11px] font-bold uppercase tracking-[0.2em]">
@@ -7019,6 +7017,7 @@ export default function App() {
                       ? 'text-black border-b-2 border-black opacity-100' 
                       : 'text-gray-500 hover:text-black opacity-60'
                   }`}
+                  id="nav-home-desktop"
                 >
                   {t('nav.home', 'Home')}
                 </li>
@@ -7029,6 +7028,7 @@ export default function App() {
                       ? 'text-black border-b-2 border-black opacity-100' 
                       : 'text-gray-500 hover:text-black opacity-60'
                   }`}
+                  id="nav-messages-desktop"
                 >
                   {t('nav.messages', 'Messages')}
                   {totalUnreadMessages > 0 && (
@@ -7054,47 +7054,26 @@ export default function App() {
                     LIVE
                   </span>
                 </li>
-                <li 
-                  onClick={() => { setSelectedNav('stuff'); setCurrentView('stuff'); }}
-                  className={`cursor-pointer pb-1 transition-all flex items-center gap-1.5 ${
-                    selectedNav === 'stuff' 
-                      ? 'text-black border-b-2 border-black opacity-100' 
-                      : 'text-gray-500 hover:text-black opacity-60'
-                  }`}
-                  id="nav-stuff-desktop"
-                >
-                  <span className="flex items-center gap-1">
-                    <BookOpen className="w-3.5 h-3.5 text-amber-600" />
-                    STUFF
-                  </span>
-                  <span className="px-1 py-0.2 text-[8px] font-black uppercase bg-amber-400 text-black rounded border border-black shadow-[1px_1px_0px_0px_#000]">
-                    NEW
-                  </span>
-                </li>
-                <li 
-                  onClick={() => { setSelectedNav('profile'); setCurrentView('profile'); }}
-                  className={`cursor-pointer pb-1 transition-all ${
-                    selectedNav === 'profile' 
-                      ? 'text-black border-b-2 border-black opacity-100' 
-                      : 'text-gray-500 hover:text-black opacity-60'
-                  }`}
-                >
-                  {t('nav.profile', 'Profile')}
-                </li>
               </ul>
 
               <div className="flex items-center gap-3">
-                <div 
+                <button 
+                  type="button"
                   onClick={() => { setSelectedNav('profile'); setCurrentView('profile'); }}
-                  className="cursor-pointer hover:rotate-3 transition-transform"
+                  className={`cursor-pointer rounded-full transition-transform hover:scale-105 active:scale-95 ${
+                    selectedNav === 'profile' ? 'ring-3 ring-black ring-offset-2' : ''
+                  }`}
                   title={t('nav.profile', 'View Profile')}
+                  id="header-profile-icon-btn"
+                  aria-label="View Profile"
                 >
                   <AvatarDisplay avatar={user.avatar} name={user.name} className="w-10 h-10 rounded-full bg-yellow-105 border-2 border-black overflow-hidden flex items-center justify-center shrink-0" />
-                </div>
+                </button>
                 <button 
                   onClick={handleLogout}
                   className="p-2 border-2 border-black bg-white hover:bg-red-50 hover:text-red-600 transition-colors rounded-lg text-black cursor-pointer"
                   title={t('nav.signOut', 'Sign Out')}
+                  id="header-logout-btn"
                 >
                   <LogOut className="w-4 h-4" />
                 </button>
@@ -7110,15 +7089,6 @@ export default function App() {
                 <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
                 <span>Bullets</span>
                 <span className="px-1 py-0.2 text-[8px] bg-red-600 text-white font-black rounded">LIVE</span>
-              </button>
-              <button 
-                onClick={() => { setSelectedNav('stuff'); setCurrentView('stuff'); }}
-                className="px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-black border-2 border-black bg-white hover:bg-amber-100 rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center gap-1.5 cursor-pointer"
-                id="guest-stuff-btn"
-              >
-                <BookOpen className="w-3.5 h-3.5 text-amber-600" />
-                <span>STUFF</span>
-                <span className="px-1 py-0.2 text-[8px] bg-amber-400 text-black font-black rounded">NEW</span>
               </button>
               <button 
                 onClick={() => { setAuthMode('signin'); setCurrentView('auth'); }}
@@ -7339,32 +7309,6 @@ export default function App() {
                   </span>
                 </button>
 
-                {/* 📚 STUFF (Student-Powered Learning Discovery) */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedNav('stuff');
-                    setCurrentView('stuff');
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border-2 transition-all font-bold text-xs uppercase tracking-wide cursor-pointer ${
-                    selectedNav === 'stuff'
-                      ? 'bg-amber-100 border-black text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
-                      : isDarkMode
-                      ? 'border-transparent text-zinc-300 hover:bg-zinc-800'
-                      : 'border-transparent text-stone-700 hover:bg-white hover:border-black/20'
-                  }`}
-                  id="mobile-drawer-stuff"
-                >
-                  <div className="flex items-center gap-3">
-                    <BookOpen className="w-4 h-4 text-amber-600" />
-                    <span>STUFF • Resources</span>
-                  </div>
-                  <span className="px-1.5 py-0.2 text-[8px] font-black uppercase bg-amber-400 text-black rounded border border-black shadow-xs">
-                    NEW
-                  </span>
-                </button>
-
                 {/* 🔖 Saved (if student / general user) */}
                 {user && user.role !== 'alumni' && (
                   <button
@@ -7490,6 +7434,32 @@ export default function App() {
                     <span>Companies</span>
                   </div>
                   <ChevronRight className="w-4 h-4 opacity-40" />
+                </button>
+
+                {/* 📚 STUFF (Student-Powered Learning Discovery) */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedNav('stuff');
+                    setCurrentView('stuff');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border-2 transition-all font-bold text-xs uppercase tracking-wide cursor-pointer ${
+                    selectedNav === 'stuff'
+                      ? 'bg-amber-100 border-black text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+                      : isDarkMode
+                      ? 'border-transparent text-zinc-300 hover:bg-zinc-800'
+                      : 'border-transparent text-stone-700 hover:bg-white hover:border-black/20'
+                  }`}
+                  id="mobile-drawer-stuff"
+                >
+                  <div className="flex items-center gap-3">
+                    <BookOpen className="w-4 h-4 text-amber-600" />
+                    <span>STUFF • Resources</span>
+                  </div>
+                  <span className="px-1.5 py-0.2 text-[8px] font-black uppercase bg-amber-400 text-black rounded border border-black shadow-xs">
+                    NEW
+                  </span>
                 </button>
 
                 {/* ℹ️ About Us */}
@@ -10765,7 +10735,7 @@ export default function App() {
                     
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6 gap-4 md:gap-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-7 gap-4 md:gap-5">
                     {/* 🤖 Card 1: AI Advisor */}
                     <div 
                       onClick={() => { setSelectedNav('ai-advisor'); setCurrentView('ai-advisor'); }}
