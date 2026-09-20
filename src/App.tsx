@@ -108,6 +108,8 @@ import {
   JobDetailInfo, 
   getFallbackSpecializations 
 } from './data/specializations';
+import { StreamClassifierView } from './components/StreamClassifierView';
+import { getStreamsForGroup } from './data/streamClassification';
 import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, deleteUser, verifyPasswordResetCode, confirmPasswordReset, checkActionCode, signInAnonymously } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, onSnapshot, addDoc, orderBy } from 'firebase/firestore';
 import { auth, db } from './lib/firebase';
@@ -1151,6 +1153,7 @@ export default function App() {
   const [isGradFunnelActive, setIsGradFunnelActive] = useState<boolean>(false);
   const [selectedSpecCourse, setSelectedSpecCourse] = useState<SpecializationCourse | null>(null);
   const [selectedJobDetail, setSelectedJobDetail] = useState<JobDetailInfo | null>(null);
+  const [selectedStreamCategory, setSelectedStreamCategory] = useState<string | null>(null);
 
   const [selected12thType, setSelected12thType] = useState<'Intermediate' | 'Polytechnic' | null>(null);
   const [selected12thStream, setSelected12thStream] = useState<string | null>(null);
@@ -1163,18 +1166,23 @@ export default function App() {
   useEffect(() => {
     setSelected12thType(null);
     setSelected12thStream(null);
+    setSelectedStreamCategory(null);
   }, [activeLevel]);
 
   useEffect(() => {
     setSelectedGraduationDegree(null);
     setSelectedSpecCourse(null);
     setSelectedJobDetail(null);
+    setSelectedStreamCategory(null);
   }, [selectedPathway?.id]);
 
   const handleSelect12thStream = (streamName: string, streamType: 'Intermediate' | 'Polytechnic', details?: any) => {
     setSelected12thStream(streamName);
+    setSelectedStreamCategory(null);
+    setSelectedGraduationDegree(null);
+    setSelectedSpecCourse(null);
+    setSelectedJobDetail(null);
     const streamKey = deriveStreamKey(streamName) || 'MPC';
-    const defaultDegree = ELIGIBILITY_MATRIX[streamKey]?.[0] || null;
 
     const pathwayObj: AcademicPathway = {
       id: details?.code || details?.id || 'stream_' + streamName.toLowerCase().replace(/[^a-z0-9]/g, '_'),
@@ -1194,9 +1202,6 @@ export default function App() {
     };
 
     setSelectedPathway(pathwayObj);
-    if (defaultDegree) {
-      setSelectedGraduationDegree(defaultDegree);
-    }
     setIsGradFunnelActive(true);
   };
 
@@ -1249,6 +1254,8 @@ export default function App() {
 
   const renderFlowchart = () => {
     if (!selectedPathway) return null;
+    const streamsForThisGroup = getStreamsForGroup(selected12thStream || selectedPathway.id || selectedPathway.name);
+    const activeStreamInfo = streamsForThisGroup.find(s => s.id === selectedStreamCategory);
     return (
       <div className="bg-amber-50/10 flex flex-col justify-between space-y-6 text-black h-full">
         <div>
@@ -1306,17 +1313,14 @@ export default function App() {
               </button>
             </div>
 
-            {/* Timeline Flow with Horizontal scroll configuration for mobile devices */}
-            <div className="overflow-x-auto -mx-5 px-5 pb-4 md:overflow-x-visible md:mx-0 md:px-0 md:pb-0 scrollbar-thin scrollbar-thumb-black">
-              <div className="relative flex flex-row md:flex-col gap-6 md:gap-0 md:space-y-6 pt-2 pb-2 min-w-[760px] md:min-w-0 md:border-l-2 md:border-dashed md:border-black/50 md:ml-3 md:pl-5">
-                
-                {/* Horizontal line connector specifically for mobile layout */}
-                <div className="absolute left-3 right-6 top-[13.5px] h-0.5 border-t-2 border-dashed border-black/40 md:hidden z-0" />
+            {/* Timeline Flow - Responsive vertical flow for both mobile and desktop */}
+            <div className="w-full pb-2">
+              <div className="relative flex flex-col space-y-6 pt-2 pb-2 border-l-2 border-dashed border-black/50 ml-3 pl-5 w-full">
 
                 {/* Step 1: 10th Standard Completed */}
-                <div className="relative text-black text-left shrink-0 w-[180px] md:w-auto z-10 flex flex-col justify-start">
-                  <div className="absolute left-0 -top-1 md:-left-[28px] md:top-1.5 w-3 h-3 rounded-full border border-black bg-zinc-300 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] z-20"></div>
-                  <div className="space-y-1 mt-4 md:mt-0">
+                <div className="relative text-black text-left w-full z-10 flex flex-col justify-start">
+                  <div className="absolute -left-[28px] top-1.5 w-3 h-3 rounded-full border border-black bg-zinc-300 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] z-20"></div>
+                  <div className="space-y-1">
                     <span className="text-[8.5px] font-mono font-black uppercase text-zinc-900 block">// STEP 01</span>
                     <h5 className="text-[11px] font-black uppercase text-black leading-none">10th Standard Finished</h5>
                     <p className="text-[10px] text-zinc-900 leading-relaxed font-sans font-semibold break-words whitespace-normal">
@@ -1326,9 +1330,9 @@ export default function App() {
                 </div>
 
                 {/* Step 2: Selected Stream */}
-                <div className="relative text-black text-left shrink-0 w-[220px] md:w-auto z-10 flex flex-col justify-start">
-                  <div className="absolute left-0 -top-1 md:-left-[28px] md:top-1.5 w-3 h-3 rounded-full border border-black bg-blue-500 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] z-20"></div>
-                  <div className="space-y-1 bg-sky-50 border-2 border-black p-2.5 rounded shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-black mt-4 md:mt-0 break-words whitespace-normal">
+                <div className="relative text-black text-left w-full z-10 flex flex-col justify-start">
+                  <div className="absolute -left-[28px] top-1.5 w-3 h-3 rounded-full border border-black bg-blue-500 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] z-20"></div>
+                  <div className="space-y-1 bg-sky-50 border-2 border-black p-2.5 rounded shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-black break-words whitespace-normal">
                     <span className="text-[8.5px] font-mono font-black uppercase text-blue-900 block">// STEP 02: ACTIVE specialisation</span>
                     <h5 className="text-[11px] font-black text-black uppercase leading-snug">{selectedPathway.name}</h5>
                     <p className="text-[9.5px] text-black leading-snug font-mono font-bold">
@@ -1339,12 +1343,30 @@ export default function App() {
                 </div>
 
                 {/* Step 3: Next Academic Level */}
-                <div className="relative text-black text-left shrink-0 w-[200px] md:w-auto z-10 flex flex-col justify-start">
-                  <div className="absolute left-0 -top-1 md:-left-[28px] md:top-1.5 w-3 h-3 rounded-full border border-black bg-purple-400 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] z-20"></div>
-                  <div className="space-y-1 mt-4 md:mt-0 break-words whitespace-normal">
-                    <span className="text-[8.5px] font-mono font-black uppercase text-purple-900 block">// STEP 03</span>
-                    <h5 className="text-[11px] font-black uppercase text-black leading-none">Collegiate Degrees & Bridges</h5>
-                    {selectedGraduationDegree ? (
+                <div className="relative text-black text-left w-full z-10 flex flex-col justify-start">
+                  <div className="absolute -left-[28px] top-1.5 w-3 h-3 rounded-full border border-black bg-purple-400 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] z-20"></div>
+                  <div className="space-y-1 break-words whitespace-normal">
+                    <span className="text-[8.5px] font-mono font-black uppercase text-purple-900 block">// STEP 03: HIGHER-ED / DEGREE</span>
+                    <h5 className="text-[11px] font-black uppercase text-black leading-none">Collegiate Degrees & Streams</h5>
+                    {selectedSpecCourse ? (
+                      <div className="mt-1.5 bg-purple-600 text-white border-2 border-black p-2.5 rounded shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                        <div className="flex items-center justify-between gap-1 mb-0.5">
+                          <span className="text-[8px] font-mono font-black text-yellow-300 uppercase tracking-widest">// TARGET DEGREE COURSE</span>
+                          <span className="text-[7.5px] bg-purple-900 text-purple-200 px-1 py-0.2 border border-purple-400 font-mono font-bold">Selected</span>
+                        </div>
+                        <h6 className="text-[11px] font-black uppercase leading-tight">🎓 {selectedSpecCourse.name} ({selectedSpecCourse.code})</h6>
+                        <p className="text-[9px] text-purple-100 font-medium font-mono leading-none mt-1">Duration: {selectedSpecCourse.duration} • Difficulty: {selectedSpecCourse.difficulty}</p>
+                      </div>
+                    ) : activeStreamInfo ? (
+                      <div className="mt-1.5 bg-indigo-600 text-white border-2 border-black p-2.5 rounded shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                        <div className="flex items-center justify-between gap-1 mb-0.5">
+                          <span className="text-[8px] font-mono font-black text-yellow-300 uppercase tracking-widest">// HIGHER-ED STREAM</span>
+                          <span className="text-[7.5px] bg-indigo-900 text-indigo-200 px-1 py-0.2 border border-indigo-400 font-mono font-bold">Active</span>
+                        </div>
+                        <h6 className="text-[11px] font-black uppercase leading-tight">{activeStreamInfo.icon} {activeStreamInfo.name}</h6>
+                        <p className="text-[9px] text-indigo-100 font-medium font-mono leading-none mt-1">Degrees: {activeStreamInfo.keyDegrees.join(', ')}</p>
+                      </div>
+                    ) : selectedGraduationDegree ? (
                       <div className="mt-1.5 bg-purple-600 text-white border-2 border-black p-2.5 rounded shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                         <span className="text-[8.5px] font-mono font-black text-yellow-300 block mb-0.5 uppercase tracking-widest">// SELECTED TARGET TRACK</span>
                         <h6 className="text-[11px] font-black uppercase leading-tight">🎓 {selectedGraduationDegree.name}</h6>
@@ -1363,12 +1385,41 @@ export default function App() {
                 </div>
 
                 {/* Step 4: Ultimate Career Outcomes */}
-                <div className="relative text-black text-left shrink-0 w-[200px] md:w-auto z-10 flex flex-col justify-start">
-                  <div className="absolute left-0 -top-1 md:-left-[28px] md:top-1.5 w-3 h-3 rounded-full border border-black bg-emerald-400 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] z-20"></div>
-                  <div className="space-y-1 mt-4 md:mt-0 break-words whitespace-normal">
-                    <span className="text-[8.5px] font-mono font-black uppercase text-emerald-900 block">// STEP 04</span>
-                    <h5 className="text-[11px] font-black uppercase text-black leading-none">Ultimate Job Outlets</h5>
-                    {selectedGraduationDegree ? (
+                <div className="relative text-black text-left w-full z-10 flex flex-col justify-start">
+                  <div className="absolute -left-[28px] top-1.5 w-3 h-3 rounded-full border border-black bg-emerald-400 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] z-20"></div>
+                  <div className="space-y-1 break-words whitespace-normal">
+                    <span className="text-[8.5px] font-mono font-black uppercase text-emerald-900 block">// STEP 04: CAREER GOALS</span>
+                    <h5 className="text-[11px] font-black uppercase text-black leading-none">Ultimate Job Outlets & Real-World Roles</h5>
+                    {selectedJobDetail ? (
+                      <div className="mt-1.5 bg-emerald-600 text-white border-2 border-black p-2.5 rounded shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                        <div className="flex items-center justify-between gap-1 mb-0.5">
+                          <span className="text-[8px] font-mono font-black text-yellow-300 uppercase tracking-widest">// ACTIVE TARGET CAREER ROLE</span>
+                          <span className="text-[7.5px] bg-emerald-900 text-emerald-100 px-1.5 py-0.2 border border-emerald-400 font-mono font-bold">Exploring</span>
+                        </div>
+                        <h6 className="text-[11px] font-black uppercase leading-tight">💼 {selectedJobDetail.title}</h6>
+                        <p className="text-[9px] text-emerald-100 font-medium font-mono leading-none mt-1">
+                          Avg: {selectedJobDetail.salaryRange.split(' per')[0]} • Senior: {selectedJobDetail.seniorLevelSalary.split(' per')[0]}
+                        </p>
+                      </div>
+                    ) : selectedSpecCourse ? (
+                      <div className="flex flex-col gap-1.5 pt-1.5">
+                        <span className="text-[8.5px] font-mono font-bold text-slate-500 uppercase tracking-wider block">// Linked High-Demand Careers:</span>
+                        {selectedSpecCourse.jobs.map((job, i) => (
+                          <div 
+                            key={i} 
+                            onClick={() => setSelectedJobDetail(job)}
+                            className="text-[9.5px] font-mono font-black uppercase bg-emerald-50 hover:bg-emerald-100 cursor-pointer text-emerald-950 border-2 border-black p-1.5 rounded leading-none shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center justify-between gap-1.5 font-semibold transition-all hover:translate-x-0.5"
+                            title="Click to explore Day-in-the-Life & Salaries"
+                          >
+                            <div className="flex items-center gap-1.5 truncate">
+                              <span className="bg-emerald-500 text-white rounded-full w-3.5 h-3.5 flex items-center justify-center text-[7.5px] border border-black font-black shrink-0">✔</span>
+                              <span className="truncate">💼 {job.title}</span>
+                            </div>
+                            <span className="text-[8px] text-emerald-700 font-bold shrink-0 font-mono">➔</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : selectedGraduationDegree ? (
                       <div className="flex flex-col gap-1.5 pt-1.5">
                         {selectedGraduationDegree.careers.map((career, i) => (
                           <div key={i} className="text-[9.5px] font-mono font-black uppercase bg-emerald-50 text-emerald-950 border-2 border-black p-1.5 rounded leading-none shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center gap-1.5 font-semibold">
@@ -1396,7 +1447,19 @@ export default function App() {
             <div className="border-t-2 border-black pt-4 bg-zinc-50 -mx-5 -mb-5 p-5 text-left">
               <span className="text-[8.5px] font-mono font-black text-blue-800 block uppercase font-bold">// Advisor Career Blueprint:</span>
               <p className="text-[10px] font-bold leading-relaxed text-slate-800 mt-1 font-sans">
-                {selectedGraduationDegree ? (
+                {selectedJobDetail ? (
+                  <>
+                    Targeting <strong>{selectedJobDetail.title}</strong> via <strong>{selectedSpecCourse?.name || selectedPathway.name}</strong> offers strong market demand with senior salary growth up to {selectedJobDetail.seniorLevelSalary}. Focus on mastering core skills: {selectedJobDetail.skillsRequired.slice(0, 3).join(', ')}.
+                  </>
+                ) : selectedSpecCourse ? (
+                  <>
+                    Studying <strong>{selectedSpecCourse.name}</strong> prepares you directly for key roles including {selectedSpecCourse.jobs.map(j => j.title).join(', ')}. Practical projects and internship preparation will accelerate placement into top companies.
+                  </>
+                ) : activeStreamInfo ? (
+                  <>
+                    Pursuing the <strong>{activeStreamInfo.name}</strong> stream provides access to {activeStreamInfo.keyDegrees.join(', ')} degree courses. Students typically start competitive entrance preparation alongside their higher secondary studies.
+                  </>
+                ) : selectedGraduationDegree ? (
                   <>
                     With a target in <strong>{selectedGraduationDegree.name}</strong>, your focus is optimized for {selectedGraduationDegree.careers.join(', ')} roles. Post-graduation trajectory aims for specialized professional entry with higher initial payouts.
                   </>
@@ -6127,7 +6190,7 @@ export default function App() {
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4">
                         {filteredAcademic.map((g) => {
                           const pathwayId = `inter_${g.code}`;
                           const isSelected = selectedPathway?.id === pathwayId;
@@ -6151,11 +6214,11 @@ export default function App() {
                                   originalData: g
                                 });
                               }}
-                              className={`cursor-pointer p-4 rounded-lg flex flex-col justify-between shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.05)] transition-all ${activeCardStyle}`}
+                              className={`cursor-pointer p-2.5 sm:p-4 rounded-lg flex flex-col justify-between shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.05)] transition-all ${activeCardStyle}`}
                             >
                               <div>
-                                <div className="flex justify-between items-start mb-2">
-                                  <span className={`text-[9px] font-mono font-black border px-1.5 py-0.5 ${
+                                <div className="flex justify-between items-start mb-1.5 sm:mb-2">
+                                  <span className={`text-[8px] sm:text-[9px] font-mono font-black border px-1 sm:px-1.5 py-0.5 ${
                                     isSelected 
                                       ? 'bg-blue-700 text-white border-blue-800 dark:bg-cyan-700 dark:text-black dark:border-cyan-800' 
                                       : 'bg-stone-100 dark:bg-zinc-900 border-black/20 text-zinc-900 dark:text-zinc-300 font-black'
@@ -6163,28 +6226,28 @@ export default function App() {
                                     GROUP {g.code}
                                   </span>
                                   {isSelected && (
-                                    <span className="text-[8px] font-black uppercase bg-yellow-300 text-black px-1.5 py-0.5 border border-black animate-pulse">
+                                    <span className="text-[7.5px] sm:text-[8px] font-black uppercase bg-yellow-300 text-black px-1 sm:px-1.5 py-0.5 border border-black animate-pulse">
                                       Active
                                     </span>
                                   )}
                                   {(isCompA || isCompB) && (
-                                    <span className="text-[8px] font-black uppercase bg-orange-600 text-white px-1.5 py-0.5 border border-black">
+                                    <span className="text-[7.5px] sm:text-[8px] font-black uppercase bg-orange-600 text-white px-1 sm:px-1.5 py-0.5 border border-black">
                                       Compare ({isCompA ? 'A' : 'B'})
                                     </span>
                                   )}
                                 </div>
 
-                                <h5 className={`text-sm font-display font-black leading-snug mb-2 ${
+                                <h5 className={`text-xs sm:text-sm font-display font-black leading-snug mb-1 sm:mb-2 line-clamp-2 ${
                                   isSelected ? 'text-white dark:text-black font-extrabold' : 'text-[#1A1A1A] dark:text-zinc-50 font-black'
                                 }`}>
                                   Intermediate {g.name}
                                 </h5>
 
-                                <div className="flex flex-wrap gap-1 mb-2">
-                                  {g.subjects.filter(s => s !== '-').map((sub, sIdx) => (
+                                <div className="flex flex-wrap gap-1 mb-1.5 sm:mb-2">
+                                  {g.subjects.filter(s => s !== '-').slice(0, 3).map((sub, sIdx) => (
                                     <span 
                                       key={sIdx} 
-                                      className={`text-[9px] font-bold px-1.5 py-0.5 border ${
+                                      className={`text-[8px] sm:text-[9px] font-bold px-1 sm:px-1.5 py-0.5 border truncate max-w-full ${
                                         isSelected 
                                           ? 'bg-blue-800 border-blue-900 text-white dark:bg-cyan-800 dark:border-cyan-900 dark:text-black font-extrabold' 
                                           : 'bg-sky-100 dark:bg-sky-950 text-zinc-900 dark:text-sky-200 border-sky-300 dark:border-sky-900 font-extrabold'
@@ -6196,13 +6259,13 @@ export default function App() {
                                 </div>
                               </div>
 
-                              <div className={`mt-3 pt-2 border-t border-dashed ${
+                              <div className={`mt-2 sm:mt-3 pt-1.5 sm:pt-2 border-t border-dashed ${
                                 isSelected ? 'border-white/20 dark:border-black/20' : 'border-black/10 dark:border-zinc-800'
                               }`}>
-                                <span className={`text-[8px] font-black uppercase tracking-wider block font-mono ${
+                                <span className={`text-[7.5px] sm:text-[8px] font-black uppercase tracking-wider block font-mono ${
                                   isSelected ? 'text-white/60 dark:text-black/60' : 'text-zinc-900 dark:text-zinc-300'
                                 }`}>Higher Admissions</span>
-                                <p className={`text-[10px] font-sans font-extrabold leading-tight line-clamp-1 ${
+                                <p className={`text-[9px] sm:text-[10px] font-sans font-extrabold leading-tight line-clamp-1 ${
                                   isSelected ? 'text-white/90 dark:text-black/90' : 'text-slate-900 dark:text-zinc-100 font-extrabold'
                                 }`}>
                                   {g.nextStudies.join(', ')}
@@ -6230,7 +6293,7 @@ export default function App() {
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4">
                         {filteredTechnical.map((p, idx) => {
                           const pathwayId = p.id;
                           const isSelected = selectedPathway?.id === pathwayId;
@@ -6255,11 +6318,11 @@ export default function App() {
                                 });
                               }}
                               style={idx === 4 ? { color: '#000000' } : {}}
-                              className={`cursor-pointer p-4 rounded-lg flex flex-col justify-between shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.05)] transition-all ${activeCardStyle}`}
+                              className={`cursor-pointer p-2.5 sm:p-4 rounded-lg flex flex-col justify-between shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.05)] transition-all ${activeCardStyle}`}
                             >
                               <div>
-                                <div className="flex justify-between items-start mb-2">
-                                  <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 border ${
+                                <div className="flex justify-between items-start mb-1.5 sm:mb-2">
+                                  <span className={`text-[8px] sm:text-[9px] font-extrabold uppercase px-1.5 sm:px-2 py-0.5 border ${
                                     isSelected 
                                       ? 'bg-blue-800 text-white border-blue-900 dark:bg-cyan-800 dark:text-black dark:border-cyan-900' 
                                       : p.isEngineering 
@@ -6269,12 +6332,12 @@ export default function App() {
                                     {p.isEngineering ? 'Engineering' : 'Specialized'}
                                   </span>
                                   {isSelected && (
-                                    <span className="text-[8px] font-black uppercase bg-yellow-300 text-black px-1 py-0.5 border border-black animate-pulse">
+                                    <span className="text-[7.5px] sm:text-[8px] font-black uppercase bg-yellow-300 text-black px-1 py-0.5 border border-black animate-pulse">
                                       Active
                                     </span>
                                   )}
                                   {(isCompA || isCompB) && (
-                                    <span className="text-[8px] font-black uppercase bg-orange-600 text-white px-1 py-0.5 border border-black">
+                                    <span className="text-[7.5px] sm:text-[8px] font-black uppercase bg-orange-600 text-white px-1 py-0.5 border border-black">
                                       Compare ({isCompA ? 'A' : 'B'})
                                     </span>
                                   )}
@@ -6282,7 +6345,7 @@ export default function App() {
 
                                 <h5 
                                   style={idx === 4 ? { borderColor: '#000000', color: '#000000' } : {}}
-                                  className={`text-sm font-display font-black leading-snug mb-1 ${
+                                  className={`text-xs sm:text-sm font-display font-black leading-snug mb-1 line-clamp-2 ${
                                     isSelected ? 'text-white dark:text-black font-extrabold' : 'text-[#1A1A1A] dark:text-zinc-50 font-black'
                                   }`}
                                 >
@@ -6291,7 +6354,7 @@ export default function App() {
 
                                 <p 
                                   style={idx === 4 ? { color: '#000000' } : {}}
-                                  className={`text-[10.5px] leading-tight line-clamp-3 my-2 ${
+                                  className={`text-[9.5px] sm:text-[10.5px] leading-tight line-clamp-2 sm:line-clamp-3 my-1 sm:my-2 ${
                                     isSelected ? 'text-white/80 dark:text-black/80 font-semibold' : 'text-slate-900 dark:text-zinc-100 font-semibold'
                                   }`}
                                 >
@@ -6299,16 +6362,16 @@ export default function App() {
                                 </p>
                               </div>
 
-                              <div className={`mt-3 pt-2 border-t border-dashed ${
+                              <div className={`mt-2 sm:mt-3 pt-1.5 sm:pt-2 border-t border-dashed ${
                                 isSelected ? 'border-white/20 dark:border-black/20' : 'border-black/10 dark:border-zinc-800'
                               }`}>
                                 <span 
                                   style={idx === 4 ? { color: '#000000' } : {}}
-                                  className={`text-[8px] font-black uppercase tracking-wider block font-mono ${
+                                  className={`text-[7.5px] sm:text-[8px] font-black uppercase tracking-wider block font-mono ${
                                     isSelected ? 'text-white/60' : 'text-zinc-900 dark:text-zinc-300'
                                   }`}
                                 >B.Tech Lateral Goal</span>
-                                <p className={`text-[10.5px] font-extrabold leading-tight truncate mt-0.5 ${
+                                <p className={`text-[9.5px] sm:text-[10.5px] font-extrabold leading-tight truncate mt-0.5 ${
                                   isSelected ? 'text-yellow-200 dark:text-indigo-950 font-black' : 'text-[#2563EB] dark:text-cyan-400 font-extrabold'
                                 }`}>
                                   {p.lateralBTech}
@@ -6336,7 +6399,7 @@ export default function App() {
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4">
                         {filteredVocational.map((t) => {
                           const pathwayId = `iti_${t.name.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
                           const isSelected = selectedPathway?.id === pathwayId;
@@ -6360,56 +6423,56 @@ export default function App() {
                                   originalData: t
                                 });
                               }}
-                              className={`cursor-pointer p-4 rounded-lg flex flex-col justify-between shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.05)] transition-all ${activeCardStyle}`}
+                              className={`cursor-pointer p-2.5 sm:p-4 rounded-lg flex flex-col justify-between shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.05)] transition-all ${activeCardStyle}`}
                             >
                               <div>
-                                <div className="flex justify-between items-start mb-2">
+                                <div className="flex justify-between items-start mb-1.5 sm:mb-2">
                                   <div className="flex gap-1">
-                                    <span className={`text-[9px] font-extrabold uppercase px-1.5 py-0.5 border ${
+                                    <span className={`text-[8px] sm:text-[9px] font-extrabold uppercase px-1 sm:px-1.5 py-0.5 border ${
                                       isSelected
                                         ? 'bg-blue-700 border-blue-800 text-white dark:bg-cyan-800 dark:text-black dark:border-cyan-800 font-extrabold'
                                         : 'bg-amber-100 text-amber-950 dark:bg-amber-950/80 dark:text-amber-200 border-amber-300 dark:border-amber-905 font-black'
                                     }`}>
                                       {t.type.replace('ITI - ', '')}
                                     </span>
-                                    <span className={`text-[9px] font-bold px-1.5 py-0.5 border ${
+                                    <span className={`text-[8px] sm:text-[9px] font-bold px-1 sm:px-1.5 py-0.5 border ${
                                       isSelected ? 'bg-blue-800 text-white border-blue-900 dark:bg-cyan-900 dark:text-black' : 'bg-stone-100 dark:bg-zinc-900 border-black/20 text-zinc-950 dark:text-zinc-305 font-black'
                                     }`}>
                                       {t.duration}
                                     </span>
                                   </div>
                                   {isSelected && (
-                                    <span className="text-[8px] font-black uppercase bg-yellow-300 text-black px-1.5 py-0.5 border border-black animate-pulse">
+                                    <span className="text-[7.5px] sm:text-[8px] font-black uppercase bg-yellow-300 text-black px-1 sm:px-1.5 py-0.5 border border-black animate-pulse">
                                       Active
                                     </span>
                                   )}
                                   {(isCompA || isCompB) && (
-                                    <span className="text-[8px] font-black uppercase bg-orange-600 text-white px-1 py-0.5 border border-black">
+                                    <span className="text-[7.5px] sm:text-[8px] font-black uppercase bg-orange-600 text-white px-1 py-0.5 border border-black">
                                       Compare ({isCompA ? 'A' : 'B'})
                                     </span>
                                   )}
                                 </div>
 
-                                <h5 className={`text-sm font-display font-black leading-snug mb-1 ${
+                                <h5 className={`text-xs sm:text-sm font-display font-black leading-snug mb-1 line-clamp-2 ${
                                   isSelected ? 'text-white dark:text-black font-extrabold' : 'text-[#1A1A1A] dark:text-zinc-50 font-black'
                                 }`}>
                                   {t.name}
                                 </h5>
 
-                                <p className={`text-[10.5px] leading-tight line-clamp-3 my-2 ${
+                                <p className={`text-[9.5px] sm:text-[10.5px] leading-tight line-clamp-2 sm:line-clamp-3 my-1 sm:my-2 ${
                                   isSelected ? 'text-white/80 dark:text-black/80 font-semibold' : 'text-slate-900 dark:text-zinc-100 font-semibold'
                                 }`}>
                                   {t.description}
                                 </p>
                               </div>
 
-                              <div className={`mt-3 pt-2 border-t border-dashed ${
+                              <div className={`mt-2 sm:mt-3 pt-1.5 sm:pt-2 border-t border-dashed ${
                                 isSelected ? 'border-white/20 dark:border-black/20' : 'border-black/10 dark:border-zinc-800'
                               }`}>
-                                <span className={`text-[8px] font-black uppercase tracking-wider block font-mono ${
+                                <span className={`text-[7.5px] sm:text-[8px] font-black uppercase tracking-wider block font-mono ${
                                   isSelected ? 'text-white/60' : 'text-zinc-900 dark:text-zinc-300'
                                 }`}>Guaranteed Trade Job</span>
-                                <p className={`text-[10.5px] font-extrabold leading-tight truncate mt-0.5 ${
+                                <p className={`text-[9.5px] sm:text-[10.5px] font-extrabold leading-tight truncate mt-0.5 ${
                                   isSelected ? 'text-yellow-250 dark:text-indigo-950 font-black' : 'text-emerald-800 dark:text-emerald-300 font-black'
                                 }`}>
                                   {t.careerPath}
@@ -6563,7 +6626,7 @@ export default function App() {
                       </div>
 
                       {/* Scrollable Mapped Intermediate Grid */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[560px] overflow-y-auto p-1 pr-2 scrollbar-thin">
+                      <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4 max-h-[560px] overflow-y-auto p-1 pr-2 scrollbar-thin">
                         {INTERMEDIATE_GROUPS.filter(g => {
                           const query = interSearchQuery.toLowerCase().trim();
                           const matchesSearch = !query || 
@@ -6613,40 +6676,40 @@ export default function App() {
                             <div
                               key={group.code}
                               onClick={() => handleSelect12thStream(group.name, 'Intermediate', group)}
-                              className={`border-2 border-black p-4 bg-white dark:bg-zinc-850 hover:bg-stone-50 dark:hover:bg-zinc-800 transition-all cursor-pointer relative group flex flex-col justify-between shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 ${hoverBorder}`}
+                              className={`border-2 border-black p-2.5 sm:p-4 bg-white dark:bg-zinc-850 hover:bg-stone-50 dark:hover:bg-zinc-800 transition-all cursor-pointer relative group flex flex-col justify-between shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 ${hoverBorder}`}
                             >
                               <div>
-                                <div className="flex justify-between items-start gap-2">
-                                  <span className={`text-[9px] font-mono font-black border px-2 py-0.5 uppercase tracking-wider rounded ${badgeStyle}`}>
+                                <div className="flex justify-between items-start gap-1 sm:gap-2">
+                                  <span className={`text-[8px] sm:text-[9px] font-mono font-black border px-1.5 sm:px-2 py-0.5 uppercase tracking-wider rounded truncate ${badgeStyle}`}>
                                     Code: {group.code}
                                   </span>
-                                  <span className="text-xl shrink-0">{icon}</span>
+                                  <span className="text-sm sm:text-xl shrink-0">{icon}</span>
                                 </div>
 
-                                <h4 className="text-base font-display font-black uppercase text-stone-900 dark:text-zinc-50 mt-2.5">
+                                <h4 className="text-xs sm:text-base font-display font-black uppercase text-stone-900 dark:text-zinc-50 mt-1.5 sm:mt-2.5 leading-tight line-clamp-2">
                                   {group.name}
                                 </h4>
 
-                                <div className="flex flex-wrap gap-1 mt-2">
-                                  {activeSubjects.map((sub, idx) => (
+                                <div className="flex flex-wrap gap-1 mt-1.5 sm:mt-2">
+                                  {activeSubjects.slice(0, 3).map((sub, idx) => (
                                     <span
                                       key={idx}
-                                      className="text-[9.5px] font-mono font-extrabold bg-stone-100 dark:bg-zinc-900 text-stone-700 dark:text-zinc-300 px-1.5 py-0.5 border border-stone-200 dark:border-zinc-700 rounded"
+                                      className="text-[8px] sm:text-[9.5px] font-mono font-extrabold bg-stone-100 dark:bg-zinc-900 text-stone-700 dark:text-zinc-300 px-1 sm:px-1.5 py-0.5 border border-stone-200 dark:border-zinc-700 rounded truncate max-w-full"
                                     >
                                       {sub}
                                     </span>
                                   ))}
                                 </div>
 
-                                <p className="text-[11px] text-stone-600 dark:text-zinc-350 mt-3 leading-snug line-clamp-2">
+                                <p className="text-[9px] sm:text-[11px] text-stone-600 dark:text-zinc-350 mt-1.5 sm:mt-3 leading-snug line-clamp-2">
                                   <span className="font-bold text-black dark:text-white">Unlocks: </span>
                                   {group.nextStudies.join(', ')}
                                 </p>
                               </div>
 
-                              <div className="mt-4 pt-2.5 border-t border-dashed border-stone-200 dark:border-zinc-800 text-[10px] font-mono font-black text-indigo-700 dark:text-indigo-400 uppercase flex items-center justify-between">
-                                <span>Select {group.name} ➔</span>
-                                <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                              <div className="mt-2.5 sm:mt-4 pt-1.5 sm:pt-2.5 border-t border-dashed border-stone-200 dark:border-zinc-800 text-[8.5px] sm:text-[10px] font-mono font-black text-indigo-700 dark:text-indigo-400 uppercase flex items-center justify-between">
+                                <span className="truncate">Select {group.name} ➔</span>
+                                <ChevronRight className="w-3 sm:w-3.5 h-3 sm:h-3.5 group-hover:translate-x-1 transition-transform shrink-0" />
                               </div>
                             </div>
                           );
@@ -6715,7 +6778,7 @@ export default function App() {
                       </div>
 
                       {/* Scrollable Mapped Polytechnic Diploma Grid */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[560px] overflow-y-auto p-1 pr-2 scrollbar-thin">
+                      <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4 max-h-[560px] overflow-y-auto p-1 pr-2 scrollbar-thin">
                         {POLYTECHNIC_DIPLOMAS.filter(p => {
                           const query = polySearchQuery.toLowerCase().trim();
                           const matchesSearch = !query ||
@@ -6735,43 +6798,43 @@ export default function App() {
                             <div
                               key={diploma.id}
                               onClick={() => handleSelect12thStream(diploma.name, 'Polytechnic', diploma)}
-                              className="border-2 border-black p-4 bg-white dark:bg-zinc-850 hover:bg-purple-50/40 dark:hover:bg-zinc-800 transition-all cursor-pointer relative group flex flex-col justify-between shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5"
+                              className="border-2 border-black p-2.5 sm:p-4 bg-white dark:bg-zinc-850 hover:bg-purple-50/40 dark:hover:bg-zinc-800 transition-all cursor-pointer relative group flex flex-col justify-between shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5"
                             >
                               <div>
-                                <div className="flex justify-between items-start gap-2">
-                                  <span className={`text-[9px] font-mono font-black border px-2 py-0.5 uppercase tracking-wider rounded ${
+                                <div className="flex justify-between items-start gap-1 sm:gap-2">
+                                  <span className={`text-[8px] sm:text-[9px] font-mono font-black border px-1.5 sm:px-2 py-0.5 uppercase tracking-wider rounded truncate ${
                                     isEng
                                       ? "bg-purple-100 text-purple-900 border-purple-300 dark:bg-purple-950 dark:text-purple-200 dark:border-purple-800"
                                       : "bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-800"
                                   }`}>
-                                    {isEng ? "⚙️ ENGINEERING" : "🎨 DESIGN / SPECIAL"}
+                                    {isEng ? "⚙️ ENGG" : "🎨 SPL"}
                                   </span>
-                                  <span className="text-xl shrink-0">{isEng ? "🔧" : "🎨"}</span>
+                                  <span className="text-sm sm:text-xl shrink-0">{isEng ? "🔧" : "🎨"}</span>
                                 </div>
 
-                                <h4 className="text-base font-display font-black uppercase text-stone-900 dark:text-zinc-50 mt-2.5">
+                                <h4 className="text-xs sm:text-base font-display font-black uppercase text-stone-900 dark:text-zinc-50 mt-1.5 sm:mt-2.5 leading-tight line-clamp-2">
                                   {diploma.name}
                                 </h4>
 
-                                <p className="text-[11.5px] text-stone-600 dark:text-zinc-350 mt-2 leading-relaxed">
+                                <p className="text-[9px] sm:text-[11.5px] text-stone-600 dark:text-zinc-350 mt-1 sm:mt-2 leading-snug line-clamp-2 sm:line-clamp-3">
                                   {diploma.description}
                                 </p>
 
                                 {diploma.lateralBTech && (
-                                  <div className="mt-3 p-2 bg-stone-50 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded">
-                                    <span className="text-[9px] font-mono font-black text-purple-700 dark:text-purple-400 block uppercase">
-                                      ⚡ Lateral B.Tech Pathway:
+                                  <div className="mt-2 sm:mt-3 p-1.5 sm:p-2 bg-stone-50 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded">
+                                    <span className="text-[7.5px] sm:text-[9px] font-mono font-black text-purple-700 dark:text-purple-400 block uppercase">
+                                      ⚡ Lateral B.Tech:
                                     </span>
-                                    <p className="text-[10px] text-stone-600 dark:text-zinc-400 font-medium leading-tight mt-0.5">
+                                    <p className="text-[8.5px] sm:text-[10px] text-stone-600 dark:text-zinc-400 font-medium leading-tight mt-0.5 truncate">
                                       {diploma.lateralBTech}
                                     </p>
                                   </div>
                                 )}
                               </div>
 
-                              <div className="mt-4 pt-2.5 border-t border-dashed border-stone-200 dark:border-zinc-800 text-[10px] font-mono font-black text-purple-700 dark:text-purple-400 uppercase flex items-center justify-between">
-                                <span>Select {diploma.name} ➔</span>
-                                <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                              <div className="mt-2.5 sm:mt-4 pt-1.5 sm:pt-2.5 border-t border-dashed border-stone-200 dark:border-zinc-800 text-[8.5px] sm:text-[10px] font-mono font-black text-purple-700 dark:text-purple-400 uppercase flex items-center justify-between">
+                                <span className="truncate">Select {diploma.name} ➔</span>
+                                <ChevronRight className="w-3 sm:w-3.5 h-3 sm:h-3.5 group-hover:translate-x-1 transition-transform shrink-0" />
                               </div>
                             </div>
                           );
@@ -6985,7 +7048,7 @@ export default function App() {
 
       {/* ================= HEADER SECTION ================= */}
       {currentView !== 'alumni-onboarding' && (
-      <nav id="top-nav" className={`sticky top-0 z-40 h-20 border-b-2 flex items-center justify-between px-6 md:px-12 transition-colors duration-200 ${
+      <nav id="top-nav" className={`sticky top-0 z-40 h-20 border-b-2 flex items-center justify-between px-3 sm:px-6 md:px-12 transition-colors duration-200 ${
         isDarkMode ? 'bg-zinc-900 border-zinc-800 text-zinc-100 shadow-sm' : 'bg-white border-black text-[#1A1A1A]'
       }`}>
         <div 
@@ -7006,7 +7069,9 @@ export default function App() {
 
         {/* Desktop & Tablet Navigation Elements (md:flex) */}
         <div className="hidden md:flex items-center gap-3">
-          <LanguageSwitcher variant="header" isDarkMode={isDarkMode} />
+          <div>
+            <LanguageSwitcher variant="header" isDarkMode={isDarkMode} />
+          </div>
           {user ? (
             <div className="flex items-center gap-6 md:gap-10">
               <ul className="flex gap-8 text-[11px] font-bold uppercase tracking-[0.2em]">
@@ -7021,6 +7086,7 @@ export default function App() {
                 >
                   {t('nav.home', 'Home')}
                 </li>
+
                 <li 
                   onClick={handleOpenMessagesTab}
                   className={`cursor-pointer pb-1 transition-all flex items-center gap-1.5 ${
@@ -7037,6 +7103,7 @@ export default function App() {
                     </span>
                   )}
                 </li>
+
                 <li 
                   onClick={() => { setSelectedNav('bullets'); setCurrentView('bullets'); }}
                   className={`cursor-pointer pb-1 transition-all flex items-center gap-1.5 ${
@@ -7069,11 +7136,13 @@ export default function App() {
                 >
                   <AvatarDisplay avatar={user.avatar} name={user.name} className="w-10 h-10 rounded-full bg-yellow-105 border-2 border-black overflow-hidden flex items-center justify-center shrink-0" />
                 </button>
+
                 <button 
                   onClick={handleLogout}
                   className="p-2 border-2 border-black bg-white hover:bg-red-50 hover:text-red-600 transition-colors rounded-lg text-black cursor-pointer"
                   title={t('nav.signOut', 'Sign Out')}
                   id="header-logout-btn"
+                  aria-label="Sign Out"
                 >
                   <LogOut className="w-4 h-4" />
                 </button>
@@ -7090,6 +7159,7 @@ export default function App() {
                 <span>Bullets</span>
                 <span className="px-1 py-0.2 text-[8px] bg-red-600 text-white font-black rounded">LIVE</span>
               </button>
+
               <button 
                 onClick={() => { setAuthMode('signin'); setCurrentView('auth'); }}
                 className="px-4 py-2 text-xs font-bold uppercase tracking-wider hover:opacity-80 transition-opacity text-black border-2 border-black bg-amber-200 rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] cursor-pointer"
@@ -7100,31 +7170,45 @@ export default function App() {
           )}
         </div>
 
-        {/* Mobile Header Right: Hamburger Menu Button (☰) ONLY (md:hidden) */}
+        {/* Mobile Header Right: Hamburger Menu Button (☰) ONLY when logged in (md:hidden) */}
         <div className="flex md:hidden items-center gap-2">
-          <button 
-            type="button"
-            onClick={() => setIsMobileMenuOpen(prev => !prev)}
-            aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
-            aria-expanded={isMobileMenuOpen}
-            id="mobile-hamburger-btn"
-            className={`p-2.5 rounded-xl border-2 border-black transition-all flex items-center justify-center cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 ${
-              isDarkMode 
-                ? 'bg-zinc-800 text-zinc-100 hover:bg-zinc-700' 
-                : 'bg-amber-200 text-black hover:bg-amber-300'
-            }`}
-          >
-            {isMobileMenuOpen ? (
-              <X className="w-6 h-6" />
-            ) : (
-              <div className="relative flex items-center justify-center">
-                <Menu className="w-6 h-6" />
-                {totalUnreadMessages > 0 && (
-                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-600 rounded-full ring-2 ring-white"></span>
-                )}
-              </div>
-            )}
-          </button>
+          {user ? (
+            <button 
+              type="button"
+              onClick={() => setIsMobileMenuOpen(prev => !prev)}
+              aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+              aria-expanded={isMobileMenuOpen}
+              id="mobile-hamburger-btn"
+              className={`p-2.5 rounded-xl border-2 border-black transition-all flex items-center justify-center cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 ${
+                isDarkMode 
+                  ? 'bg-zinc-800 text-zinc-100 hover:bg-zinc-700' 
+                  : 'bg-amber-200 text-black hover:bg-amber-300'
+              }`}
+            >
+              {isMobileMenuOpen ? (
+                <X className="w-6 h-6" />
+              ) : (
+                <div className="relative flex items-center justify-center">
+                  <Menu className="w-6 h-6" />
+                  {totalUnreadMessages > 0 && (
+                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-600 rounded-full ring-2 ring-white"></span>
+                  )}
+                </div>
+              )}
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <LanguageSwitcher variant="header" isDarkMode={isDarkMode} />
+              <button 
+                type="button"
+                onClick={() => { setAuthMode('signin'); setCurrentView('auth'); }}
+                className="px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-black border-2 border-black bg-amber-200 hover:bg-amber-300 rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] cursor-pointer"
+                id="mobile-guest-signin-btn"
+              >
+                {t('nav.signIn', 'Sign In')}
+              </button>
+            </div>
+          )}
         </div>
 
       </nav>
@@ -7132,7 +7216,7 @@ export default function App() {
 
       {/* ================= MOBILE SIDE NAVIGATION DRAWER (md:hidden) ================= */}
       <AnimatePresence>
-        {isMobileMenuOpen && (
+        {user && isMobileMenuOpen && (
           <div className="fixed inset-0 z-50 md:hidden">
             {/* Backdrop: Clicking outside closes the panel */}
             <motion.div
@@ -7363,7 +7447,7 @@ export default function App() {
                 <div className="pt-2 pb-1">
                   <div className="border-t border-black/15 dark:border-zinc-800"></div>
                   <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mt-2 px-1">
-                    Explore & Career
+                    {t('nav.exploreAndCareer', 'Explore & Career')}
                   </p>
                 </div>
 
@@ -7385,7 +7469,7 @@ export default function App() {
                 >
                   <div className="flex items-center gap-3">
                     <Award className="w-4 h-4 text-rose-600" />
-                    <span>Entrance Exams</span>
+                    <span>{t('nav.entranceExams', 'Entrance Exams')}</span>
                   </div>
                   <ChevronRight className="w-4 h-4 opacity-40" />
                 </button>
@@ -7408,7 +7492,7 @@ export default function App() {
                 >
                   <div className="flex items-center gap-3">
                     <Coins className="w-4 h-4 text-amber-600" />
-                    <span>Scholarships</span>
+                    <span>{t('nav.scholarships', 'Scholarships')}</span>
                   </div>
                   <ChevronRight className="w-4 h-4 opacity-40" />
                 </button>
@@ -7431,7 +7515,7 @@ export default function App() {
                 >
                   <div className="flex items-center gap-3">
                     <Building2 className="w-4 h-4 text-indigo-600" />
-                    <span>Companies</span>
+                    <span>{t('nav.companies', 'Companies')}</span>
                   </div>
                   <ChevronRight className="w-4 h-4 opacity-40" />
                 </button>
@@ -7455,7 +7539,7 @@ export default function App() {
                 >
                   <div className="flex items-center gap-3">
                     <BookOpen className="w-4 h-4 text-amber-600" />
-                    <span>STUFF • Resources</span>
+                    <span>{t('nav.stuff', 'STUFF • Resources')}</span>
                   </div>
                   <span className="px-1.5 py-0.2 text-[8px] font-black uppercase bg-amber-400 text-black rounded border border-black shadow-xs">
                     NEW
@@ -7480,7 +7564,7 @@ export default function App() {
                 >
                   <div className="flex items-center gap-3">
                     <Info className="w-4 h-4 text-sky-600" />
-                    <span>About Us</span>
+                    <span>{t('nav.aboutUs', 'About Us')}</span>
                   </div>
                   <ChevronRight className="w-4 h-4 opacity-40" />
                 </button>
@@ -7529,7 +7613,7 @@ export default function App() {
                       }}
                       className="w-full py-2 px-4 rounded-xl border-2 border-black bg-white hover:bg-stone-100 text-black font-bold text-xs uppercase tracking-wider flex items-center justify-center cursor-pointer"
                     >
-                      Create Free Account
+                      {t('nav.createAccount', 'Create Free Account')}
                     </button>
                   </div>
                 )}
@@ -7730,19 +7814,22 @@ export default function App() {
 
             {/* Beautiful Neo-Brutalist Community Statistics Bar */}
             <div className="w-full grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-              <div className="border-2 border-black dark:border-zinc-700 p-6 bg-white dark:bg-zinc-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,110,0,0.15)]">
+              <div className="w-full border-2 border-black dark:border-zinc-700 p-6 bg-white dark:bg-zinc-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,110,0,0.15)] hover:translate-y-[-2px] transition-transform">
                 <p id="stat-active-students" className="text-4xl md:text-5xl font-display font-black text-rose-600 dark:text-rose-400 italic">{totalStudents}</p>
                 <p className="text-xs uppercase font-bold tracking-widest text-gray-500 dark:text-zinc-400 mt-2">{t('landing.activeStudentsAssisted', 'Active Students Assisted')}</p>
               </div>
-              <div className="border-2 border-black dark:border-zinc-700 p-6 bg-white dark:bg-zinc-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,110,0,0.15)]">
+
+              <div className="w-full border-2 border-black dark:border-zinc-700 p-6 bg-white dark:bg-zinc-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,110,0,0.15)] hover:translate-y-[-2px] transition-transform">
                 <p id="stat-verified-alumni" className="text-4xl md:text-5xl font-display font-black text-blue-600 dark:text-cyan-400 italic">{totalAlumniMentors}</p>
                 <p className="text-xs uppercase font-bold tracking-widest text-gray-500 dark:text-zinc-400 mt-2">{t('landing.verifiedGraduateAlumni', 'Verified Graduate Alumni')}</p>
               </div>
-              <div className="border-2 border-black dark:border-zinc-700 p-6 bg-white dark:bg-zinc-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,110,0,0.15)]">
+
+              <div className="w-full border-2 border-black dark:border-zinc-700 p-6 bg-white dark:bg-zinc-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,110,0,0.15)] hover:translate-y-[-2px] transition-transform">
                 <p id="stat-contributed-insights" className="text-4xl md:text-5xl font-display font-black text-amber-500 dark:text-amber-400 italic">{totalContributedInsights}</p>
                 <p className="text-xs uppercase font-bold tracking-widest text-gray-500 dark:text-zinc-400 mt-2">{t('landing.contributedInsights', 'Contributed Insights / Paths')}</p>
               </div>
-              <div className="border-2 border-black dark:border-zinc-700 p-6 bg-white dark:bg-zinc-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,110,0,0.15)]">
+
+              <div className="w-full border-2 border-black dark:border-zinc-700 p-6 bg-white dark:bg-zinc-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,110,0,0.15)] hover:translate-y-[-2px] transition-transform">
                 <p id="stat-success-rate" className="text-4xl md:text-5xl font-display font-black text-emerald-600 dark:text-emerald-400 italic">100%</p>
                 <p className="text-xs uppercase font-bold tracking-widest text-gray-500 dark:text-zinc-400 mt-2">{t('landing.counselingSuccessRate', 'Counseling Success Rate')}</p>
               </div>
@@ -8988,50 +9075,50 @@ export default function App() {
                           <p className="text-xs text-stone-500 mt-1">{t('home.exploreSubtitle', 'Choose how you want to discover educational routes and custom timelines.')}</p>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-2 md:grid-cols-2 gap-3 sm:gap-6">
                           {/* Option A: Search by Job Name */}
                           <div 
                             onClick={() => { setSearchMethod('job'); setJobQuery(''); }}
-                            className="border-2 border-black p-6 bg-white hover:bg-slate-50 transition-all cursor-pointer relative group flex flex-col justify-between shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5"
+                            className="border-2 border-black p-3 sm:p-6 bg-white hover:bg-slate-50 transition-all cursor-pointer relative group flex flex-col justify-between shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5"
                             id="explore-by-job"
                           >
                             <div>
-                              <div className="flex justify-between items-start mb-2 font-bold">
-                                <span className="text-[10px] font-mono font-black tracking-widest text-[#CB5A07] bg-amber-50 border border-amber-200 px-2 py-0.5">01</span>
-                                <span className="text-3xl opacity-20 filter grayscale group-hover:grayscale-0 transition-all">🔍</span>
+                              <div className="flex justify-between items-start mb-1.5 sm:mb-2 font-bold">
+                                <span className="text-[9px] sm:text-[10px] font-mono font-black tracking-widest text-[#CB5A07] bg-amber-50 border border-amber-200 px-1.5 sm:px-2 py-0.5">01</span>
+                                <span className="text-xl sm:text-3xl opacity-30 filter grayscale group-hover:grayscale-0 transition-all">🔍</span>
                               </div>
-                              <h4 className="text-xl font-display font-black uppercase text-stone-900 mt-2">{t('home.searchByJobTitle', 'Search by Job Name?')}</h4>
-                              <p className="text-xs text-stone-600 mt-2 leading-relaxed font-semibold">
+                              <h4 className="text-xs sm:text-base md:text-xl font-display font-black uppercase text-stone-900 mt-1 sm:mt-2 line-clamp-2 leading-tight sm:leading-normal">{t('home.searchByJobTitle', 'Search by Job Name?')}</h4>
+                              <p className="text-[10px] sm:text-xs text-stone-600 mt-1 sm:mt-2 leading-tight sm:leading-relaxed font-medium sm:font-semibold line-clamp-3 sm:line-clamp-none">
                                 {t('home.searchByJobDesc', 'Type in your dream role, e.g., Software Engineer, Doctor, or Chartered Accountant to map backwards and find the qualifying courses and progression flowcharts.')}
                               </p>
                             </div>
                             
-                            <div className="mt-6 text-[10px] font-black uppercase text-blue-600 flex items-center justify-between group-hover:translate-x-1 transition-transform border-t border-dashed border-stone-150 pt-3">
-                              <span>{t('home.searchByJobBtn', 'Search Jobs & View Plans ➔')}</span>
-                              <ChevronRight className="w-3.5 h-3.5" />
+                            <div className="mt-3 sm:mt-6 text-[9px] sm:text-[10px] font-black uppercase text-blue-600 flex items-center justify-between group-hover:translate-x-1 transition-transform border-t border-dashed border-stone-150 pt-2 sm:pt-3">
+                              <span className="truncate">{t('home.searchByJobBtn', 'Search Jobs ➔')}</span>
+                              <ChevronRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
                             </div>
                           </div>
 
                           {/* Option B: Search by Class */}
                           <div 
                             onClick={() => { setSearchMethod('class'); }}
-                            className="border-2 border-black p-6 bg-white hover:bg-slate-50 transition-all cursor-pointer relative group flex flex-col justify-between shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5"
+                            className="border-2 border-black p-3 sm:p-6 bg-white hover:bg-slate-50 transition-all cursor-pointer relative group flex flex-col justify-between shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5"
                             id="explore-by-class"
                           >
                             <div>
-                              <div className="flex justify-between items-start mb-2">
-                                <span className="text-[10px] font-mono font-black tracking-widest text-emerald-700 bg-emerald-50 border border-emerald-250 px-2 py-0.5">02</span>
-                                <span className="text-3xl opacity-20 filter grayscale group-hover:grayscale-0 transition-all">🎓</span>
+                              <div className="flex justify-between items-start mb-1.5 sm:mb-2">
+                                <span className="text-[9px] sm:text-[10px] font-mono font-black tracking-widest text-emerald-700 bg-emerald-50 border border-emerald-250 px-1.5 sm:px-2 py-0.5">02</span>
+                                <span className="text-xl sm:text-3xl opacity-30 filter grayscale group-hover:grayscale-0 transition-all">🎓</span>
                               </div>
-                              <h4 className="text-xl font-display font-black uppercase text-stone-900 mt-2">{t('home.searchByClassTitle', 'Search by Class?')}</h4>
-                              <p className="text-xs text-stone-600 mt-2 leading-relaxed font-semibold">
+                              <h4 className="text-xs sm:text-base md:text-xl font-display font-black uppercase text-stone-900 mt-1 sm:mt-2 line-clamp-2 leading-tight sm:leading-normal">{t('home.searchByClassTitle', 'Search by Class?')}</h4>
+                              <p className="text-[10px] sm:text-xs text-stone-600 mt-1 sm:mt-2 leading-tight sm:leading-relaxed font-medium sm:font-semibold line-clamp-3 sm:line-clamp-none">
                                 {t('home.searchByClassDesc', 'Select pathways based on classes. Simply pick whether you completed Class 10th or Class 12th to explore educational maps.')}
                               </p>
                             </div>
 
-                            <div className="mt-6 text-[10px] font-black uppercase text-emerald-600 flex items-center justify-between group-hover:translate-x-1 transition-transform border-t border-dashed border-stone-150 pt-3">
-                              <span>{t('home.searchByClassBtn', 'Choose Grade Standard ➔')}</span>
-                              <ChevronRight className="w-3.5 h-3.5" />
+                            <div className="mt-3 sm:mt-6 text-[9px] sm:text-[10px] font-black uppercase text-emerald-600 flex items-center justify-between group-hover:translate-x-1 transition-transform border-t border-dashed border-stone-150 pt-2 sm:pt-3">
+                              <span className="truncate">{t('home.searchByClassBtn', 'Choose Grade ➔')}</span>
+                              <ChevronRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
                             </div>
                           </div>
                         </div>
@@ -9041,11 +9128,11 @@ export default function App() {
 
                   {/* OPTION B SUB-SCREEN: CHOOSE CLASS (10th vs 12th) */}
                   {searchMethod === 'class' && (
-                    <div className="border-2 border-black p-6 bg-amber-50/10 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-left space-y-4">
+                    <div className="border-2 border-black p-4 sm:p-6 bg-amber-50/10 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-left space-y-4">
                       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-2 border-b border-dashed border-stone-200">
                         <button 
                           onClick={() => { setSearchMethod('none'); setActiveLevel(null); setSelectedPathway(null); }}
-                          className="px-3.5 py-2 border-2 border-black text-xs font-black uppercase bg-white hover:bg-stone-50 hover:translate-x-0.5 hover:translate-y-0.5 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none flex items-center gap-1 cursor-pointer"
+                          className="px-3 py-1.5 sm:px-3.5 sm:py-2 border-2 border-black text-[11px] sm:text-xs font-black uppercase bg-white hover:bg-stone-50 hover:translate-x-0.5 hover:translate-y-0.5 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none flex items-center gap-1 cursor-pointer"
                         >
                           {t('home.backToSearchOptions', '← Back to Search Options')}
                         </button>
@@ -9053,38 +9140,38 @@ export default function App() {
                       </div>
 
                       <div>
-                        <h3 className="text-2xl font-display font-black uppercase">{t('home.classSelectionTitle', 'Which class have you completed?')}</h3>
-                        <p className="text-xs text-stone-500 mt-0.5">{t('home.classSelectionSubtitle', 'Submit your academic standard to render the corresponding roadmap diagram.')}</p>
+                        <h3 className="text-xl sm:text-2xl font-display font-black uppercase">{t('home.classSelectionTitle', 'Which class have you completed?')}</h3>
+                        <p className="text-[11px] sm:text-xs text-stone-500 mt-0.5">{t('home.classSelectionSubtitle', 'Submit your academic standard to render the corresponding roadmap diagram.')}</p>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                      <div className="grid grid-cols-2 md:grid-cols-2 gap-3 sm:gap-6 pt-2">
                         {/* 10th Choice node trigger */}
                         <div 
                           onClick={() => { setActiveLevel('10th'); setSelectedPathway(null); setShowPost10thChoice(true); }}
-                          className={`border-2 border-black p-6 bg-white transition-all cursor-pointer relative group shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none ${activeLevel === '10th' ? 'bg-amber-100 border-dashed ring-2 ring-black shadow-none translate-x-0.5 translate-y-0.5' : 'hover:bg-slate-50'}`}
+                          className={`border-2 border-black p-3 sm:p-6 bg-white transition-all cursor-pointer relative group shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none ${activeLevel === '10th' ? 'bg-amber-100 border-dashed ring-2 ring-black shadow-none translate-x-0.5 translate-y-0.5' : 'hover:bg-slate-50'}`}
                         >
-                          <span className="absolute top-4 right-4 text-3xl opacity-15 font-serif italic font-bold">01</span>
-                          <p className="text-[10px] uppercase tracking-widest font-bold text-amber-600">{t('home.schoolLevel', 'School Level standard')}</p>
-                          <h3 className="text-xl font-display font-black mt-1 uppercase">{t('home.completed10thTitle', 'Completed 10th')}</h3>
-                          <p className="text-xs text-gray-500 mt-2 font-semibold">{t('home.completed10thDesc', 'Explore Intermediate groups Science (MPC/BiPC), Commerce (MEC/CEC), Polytechnique, and ITI Trades.')}</p>
-                          <div className="mt-4 text-[10px] font-black uppercase text-blue-600 flex items-center justify-between group-hover:translate-x-1 transition-transform border-t border-stone-100 pt-3">
-                            <span>{activeLevel === '10th' ? t('home.mapActive', '● Map Active') : t('home.viewNodeMap', 'View Courses')}</span>
-                            <ChevronRight className="w-3.5 h-3.5" />
+                          <span className="absolute top-2 sm:top-4 right-2 sm:right-4 text-xl sm:text-3xl opacity-15 font-serif italic font-bold">01</span>
+                          <p className="text-[8px] sm:text-[10px] uppercase tracking-widest font-bold text-amber-600 truncate">{t('home.schoolLevel', 'School Level')}</p>
+                          <h3 className="text-xs sm:text-base md:text-xl font-display font-black mt-0.5 sm:mt-1 uppercase leading-tight sm:leading-normal">{t('home.completed10thTitle', 'Completed 10th')}</h3>
+                          <p className="text-[10px] sm:text-xs text-gray-500 mt-1 sm:mt-2 font-medium sm:font-semibold line-clamp-3 sm:line-clamp-none leading-tight sm:leading-normal">{t('home.completed10thDesc', 'Explore Intermediate groups Science (MPC/BiPC), Commerce (MEC/CEC), Polytechnique, and ITI Trades.')}</p>
+                          <div className="mt-2.5 sm:mt-4 text-[9px] sm:text-[10px] font-black uppercase text-blue-600 flex items-center justify-between group-hover:translate-x-1 transition-transform border-t border-stone-100 pt-2 sm:pt-3">
+                            <span className="truncate">{activeLevel === '10th' ? t('home.mapActive', '● Active') : t('home.viewNodeMap', 'View Courses')}</span>
+                            <ChevronRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
                           </div>
                         </div>
 
                         {/* 12th Choice node trigger */}
                         <div 
                           onClick={() => { setActiveLevel('12th'); setSelectedPathway(null); setSelected12thType(null); setSelected12thStream(null); }}
-                          className={`border-2 border-black p-6 bg-white transition-all cursor-pointer relative group shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none ${activeLevel === '12th' ? 'bg-indigo-50 border-dashed ring-2 ring-black shadow-none translate-x-0.5 translate-y-0.5' : 'hover:bg-slate-50'}`}
+                          className={`border-2 border-black p-3 sm:p-6 bg-white transition-all cursor-pointer relative group shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none ${activeLevel === '12th' ? 'bg-indigo-50 border-dashed ring-2 ring-black shadow-none translate-x-0.5 translate-y-0.5' : 'hover:bg-slate-50'}`}
                         >
-                          <span className="absolute top-4 right-4 text-3xl opacity-15 font-serif italic font-bold">02</span>
-                          <p className="text-[10px] uppercase tracking-widest font-bold text-indigo-600">{t('home.collegeLevel', 'College Level standard')}</p>
-                          <h3 className="text-xl font-display font-black mt-1 uppercase">{t('home.completed12thTitle', 'Completed 12th')}</h3>
-                          <p className="text-xs text-gray-500 mt-2 font-semibold">{t('home.completed12thDesc', 'Explore Engineering CSE/Mech/ECE, Medical MBBS/Dentistry, business BBA, CA auditing compliance, and law.')}</p>
-                          <div className="mt-4 text-[10px] font-black uppercase text-blue-600 flex items-center justify-between group-hover:translate-x-1 transition-transform border-t border-stone-100 pt-3">
-                            <span>{activeLevel === '12th' ? t('home.mapActive', '● Map Active') : t('home.viewNodeMap', 'View Courses')}</span>
-                            <ChevronRight className="w-3.5 h-3.5" />
+                          <span className="absolute top-2 sm:top-4 right-2 sm:right-4 text-xl sm:text-3xl opacity-15 font-serif italic font-bold">02</span>
+                          <p className="text-[8px] sm:text-[10px] uppercase tracking-widest font-bold text-indigo-600 truncate">{t('home.collegeLevel', 'College Level')}</p>
+                          <h3 className="text-xs sm:text-base md:text-xl font-display font-black mt-0.5 sm:mt-1 uppercase leading-tight sm:leading-normal">{t('home.completed12thTitle', 'Completed 12th')}</h3>
+                          <p className="text-[10px] sm:text-xs text-gray-500 mt-1 sm:mt-2 font-medium sm:font-semibold line-clamp-3 sm:line-clamp-none leading-tight sm:leading-normal">{t('home.completed12thDesc', 'Explore Engineering CSE/Mech/ECE, Medical MBBS/Dentistry, business BBA, CA auditing compliance, and law.')}</p>
+                          <div className="mt-2.5 sm:mt-4 text-[9px] sm:text-[10px] font-black uppercase text-blue-600 flex items-center justify-between group-hover:translate-x-1 transition-transform border-t border-stone-100 pt-2 sm:pt-3">
+                            <span className="truncate">{activeLevel === '12th' ? t('home.mapActive', '● Active') : t('home.viewNodeMap', 'View Courses')}</span>
+                            <ChevronRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
                           </div>
                         </div>
                       </div>
@@ -10632,49 +10719,59 @@ export default function App() {
 
                   {/* Horizontal Engagement Statistics Banner */}
                   <div id="horizontal-engagement-stats-bar" className="w-full border-2 border-black bg-white dark:bg-zinc-900 p-5 md:p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] rounded-xl mt-8 transition-all">
-                    <div className="flex items-center justify-between border-b-2 border-black/10 dark:border-white/10 pb-3 mb-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-black/10 dark:border-white/10 pb-3 mb-4">
                       <div className="flex items-center gap-2">
                         <BarChart3 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                         <span className="text-xs font-display font-black uppercase tracking-wider text-black dark:text-white">
                           {t('telemetry.header', 'Engagement Statistics Overview')}
                         </span>
                       </div>
-                      <span className="text-[10px] font-mono font-bold text-stone-500 uppercase">{t('telemetry.badge', 'DIRPA Ecosystem Telemetry')}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-mono font-bold text-stone-500 uppercase">{t('telemetry.badge', 'DIRPA Ecosystem Telemetry')}</span>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 divide-y sm:divide-y-0 sm:divide-x divide-stone-200 dark:divide-zinc-800">
-                      <div className="pt-2 sm:pt-0 sm:px-4 text-center sm:text-left flex flex-col justify-center">
-                        <span className="text-[10px] uppercase font-black tracking-wider text-stone-500 block mb-1">
-                          {t('telemetry.activeStudents', 'Active Students')}
-                        </span>
-                        <span id="stat-active-students-banner" className="text-2xl md:text-3xl font-display font-black text-black dark:text-white">
+                      <div className="pt-2 sm:pt-0 sm:px-4 text-center sm:text-left flex flex-col justify-center transition-all p-2 rounded-lg -m-2">
+                        <div className="flex items-center justify-center sm:justify-between gap-1 mb-1">
+                          <span className="text-[10px] uppercase font-black tracking-wider text-stone-500 dark:text-zinc-400 block">
+                            {t('telemetry.activeStudents', 'Active Students')}
+                          </span>
+                        </div>
+                        <span id="stat-active-students-banner" className="text-2xl md:text-3xl font-display font-black text-black dark:text-white inline-block">
                           {totalStudents}
                         </span>
                       </div>
 
-                      <div className="pt-2 sm:pt-0 sm:px-4 text-center sm:text-left flex flex-col justify-center">
-                        <span className="text-[10px] uppercase font-black tracking-wider text-stone-500 block mb-1">
-                          {t('telemetry.verifiedAlumni', 'Verified Alumni Mentors')}
-                        </span>
-                        <span id="stat-verified-alumni-banner" className="text-2xl md:text-3xl font-display font-black text-emerald-600 dark:text-emerald-400">
+                      <div className="pt-2 sm:pt-0 sm:px-4 text-center sm:text-left flex flex-col justify-center transition-all p-2 rounded-lg -m-2">
+                        <div className="flex items-center justify-center sm:justify-between gap-1 mb-1">
+                          <span className="text-[10px] uppercase font-black tracking-wider text-stone-500 dark:text-zinc-400 block">
+                            {t('telemetry.verifiedAlumni', 'Verified Alumni Mentors')}
+                          </span>
+                        </div>
+                        <span id="stat-verified-alumni-banner" className="text-2xl md:text-3xl font-display font-black text-emerald-600 dark:text-emerald-400 inline-block">
                           {totalAlumniMentors}
                         </span>
                       </div>
 
-                      <div className="pt-2 sm:pt-0 sm:px-4 text-center sm:text-left flex flex-col justify-center">
-                        <span className="text-[10px] uppercase font-black tracking-wider text-stone-500 block mb-1">
-                          {t('telemetry.contributedInsights', 'Contributed Insights')}
-                        </span>
-                        <span id="stat-insights-banner" className="text-2xl md:text-3xl font-display font-black text-purple-600 dark:text-purple-400">
+                      <div className="pt-2 sm:pt-0 sm:px-4 text-center sm:text-left flex flex-col justify-center transition-all p-2 rounded-lg -m-2">
+                        <div className="flex items-center justify-center sm:justify-between gap-1 mb-1">
+                          <span className="text-[10px] uppercase font-black tracking-wider text-stone-500 dark:text-zinc-400 block">
+                            {t('telemetry.contributedInsights', 'Contributed Insights')}
+                          </span>
+                        </div>
+                        <span id="stat-insights-banner" className="text-2xl md:text-3xl font-display font-black text-purple-600 dark:text-purple-400 inline-block">
                           {totalContributedInsights}
                         </span>
                       </div>
 
-                      <div className="pt-2 sm:pt-0 sm:px-4 text-center sm:text-left flex flex-col justify-center">
-                        <span className="text-[10px] uppercase font-black tracking-wider text-stone-500 block mb-1">
-                          {t('telemetry.mentorshipMessages', 'Mentorship Messages')}
-                        </span>
-                        <span id="stat-messages-banner" className="text-2xl md:text-3xl font-display font-black text-blue-600 dark:text-blue-400">
+                      <div className="pt-2 sm:pt-0 sm:px-4 text-center sm:text-left flex flex-col justify-center transition-all p-2 rounded-lg -m-2">
+                        <div className="flex items-center justify-center sm:justify-between gap-1 mb-1">
+                          <span className="text-[10px] uppercase font-black tracking-wider text-stone-500 dark:text-zinc-400 block">
+                            {t('telemetry.mentorshipMessages', 'Mentorship Messages')}
+                          </span>
+                        </div>
+                        <span id="stat-messages-banner" className="text-2xl md:text-3xl font-display font-black text-blue-600 dark:text-blue-400 inline-block">
                           {chatThreads.reduce((sum, t) => sum + (t.messages || []).length, 0)}
                         </span>
                       </div>
@@ -11001,7 +11098,9 @@ export default function App() {
             className="max-w-7xl mx-auto px-6 py-6 md:py-10 space-y-6"
           >
             {isGradFunnelActive ? (
-              <div className="space-y-6">
+              <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+                {/* Main Interactive Stage Workspace */}
+                <div className="xl:col-span-8 space-y-6 min-w-0">
                 {selectedJobDetail ? (
                   /* LEVEL D: Specific Job Details & Work Media Visuals */
                   <div className="space-y-6">
@@ -11331,7 +11430,7 @@ export default function App() {
                         onClick={() => setSelectedSpecCourse(null)}
                         className="px-6 py-3 bg-[#0F172A] text-white hover:bg-black border-2 border-black font-display font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all cursor-pointer"
                       >
-                        ← Back to branches of {selectedGraduationDegree?.name}
+                        ← Back to {selectedStreamCategory ? 'Eligible Courses & Branches' : (selectedGraduationDegree?.name ? `branches of ${selectedGraduationDegree.name}` : 'Courses List')}
                       </button>
                     </div>
 
@@ -11655,242 +11754,43 @@ export default function App() {
                       </div>
                     </div>
                   </div>
-                ) : selectedGraduationDegree ? (
-                  /* LEVEL B: Specialization Branches list inside selected Degree */
-                  <div className="space-y-6 animate-fade-in">
-                    {/* Back to paths grid */}
-                    <div className="flex flex-wrap gap-2.5 justify-start mb-2">
-                      <button 
-                        onClick={() => setSelectedGraduationDegree(null)}
-                        className="px-6 py-3 bg-[#0F172A] text-white hover:bg-black border-2 border-black font-display font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all cursor-pointer"
-                      >
-                        ← Back to Eligible Graduation Degrees grid
-                      </button>
-                      
-                    </div>
-
-                    <div className="border-2 border-black bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
-                      {/* Title panel */}
-                      <div className="bg-black text-white p-6 md:p-8 border-b-2 border-black text-left">
-                        <span className="text-[10px] uppercase font-bold text-yellow-300 font-mono tracking-widest block mb-1">
-                          Graduate Course Focus - Specialization Finder
-                        </span>
-                        <div className="flex flex-wrap items-center justify-between gap-4">
-                          <div>
-                            <h2 className="text-3xl md:text-4xl font-display font-black uppercase text-white animate-fade-in">
-                              🎓 Specializations of {selectedGraduationDegree.name}
-                            </h2>
-                            <p className="text-xs text-neutral-400 mt-2 font-mono font-bold uppercase tracking-wider">
-                              Explore sub-courses, verified feedbacks, study details, and direct career simulation pathways.
-                            </p>
-                          </div>
-                          <span className="bg-[#8B5CF6] text-white text-xs font-mono font-bold border border-black px-3 py-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                            {selectedGraduationDegree.duration} Programme
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Split list */}
-                      <div className="grid grid-cols-1 lg:grid-cols-12 divide-y-2 lg:divide-y-0 lg:divide-x-2 divide-black bg-stone-50">
-                        {/* Branches List */}
-                        <div className="lg:col-span-8 p-6 md:p-8 space-y-6 text-left">
-                          <div className="bg-emerald-50 border-2 border-black p-4 text-black text-xs rounded-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                            <span className="font-mono font-bold block uppercase mb-1 text-emerald-800">SPECIALIZATION ROADMAPS AVAILABLE:</span>
-                            Select a custom discipline below to review key academic subjects, student course feedback, and high payout salaries.
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {(() => {
-                              const list = DEGREE_SPECIALIZATION_MAP[selectedGraduationDegree.name] || getFallbackSpecializations(selectedGraduationDegree.name);
-                              return list.map((course) => {
-                                const avgRating = course.feedback.reduce((sum, item) => sum + item.rating, 0) / course.feedback.length;
-                                return (
-                                  <div
-                                    key={course.id}
-                                    onClick={() => setSelectedSpecCourse(course)}
-                                    className="cursor-pointer bg-white border-2 border-black p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none relative flex flex-col justify-between transition-all hover:bg-stone-50"
-                                  >
-                                    <div className="space-y-3">
-                                      <div className="flex justify-between items-center gap-2">
-                                        <span className="text-[9px] font-mono font-black border border-black bg-yellow-300 text-black px-2 py-0.5 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
-                                          🕒 {course.duration}
-                                        </span>
-                                        <span className={`text-[9.5px] font-mono font-bold border border-black/15 px-2 py-0.5 ${
-                                          course.difficulty === 'Intense' ? 'bg-rose-100 text-rose-800' :
-                                          course.difficulty === 'Hard' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
-                                        }`}>
-                                          Difficulty: {course.difficulty}
-                                        </span>
-                                      </div>
-                                      
-                                      <h4 className="font-display font-black uppercase text-base tracking-tight leading-tight text-purple-950">
-                                        {course.name} ({course.code})
-                                      </h4>
-                                      <p className="text-xs leading-relaxed text-neutral-600 font-semibold line-clamp-3">
-                                        {course.description}
-                                      </p>
-                                    </div>
-
-                                    <div className="mt-5 border-t border-dashed border-stone-200 pt-4 space-y-3">
-                                      <div>
-                                        <span className="text-[8.5px] font-mono font-black block uppercase tracking-wider text-slate-500 mb-1">
-                                          Focus subjects highlight:
-                                        </span>
-                                        <div className="flex flex-wrap gap-1">
-                                          {course.keyFocusAreas.slice(0, 2).map((area, idx) => (
-                                            <span key={idx} className="text-[9px] font-mono font-bold bg-stone-100 text-neutral-700 px-1.5 py-0.5 border border-black/10 rounded-sm">
-                                              ● {area}
-                                            </span>
-                                          ))}
-                                        </div>
-                                      </div>
-
-                                      <div className="flex justify-between items-center text-xs border-t border-dashed border-stone-105 pt-2.5">
-                                        <span className="text-yellow-605 font-mono font-bold text-[9.5px] flex items-center gap-1">
-                                          ★ {avgRating.toFixed(1)} <span className="text-stone-400">({course.feedback.length} feedbacks)</span>
-                                        </span>
-                                        <span className="text-[9.5px] font-mono font-black text-[#8B5CF6] uppercase hover:underline">
-                                          View Details & Jobs →
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              });
-                            })()}
-                          </div>
-                        </div>
-
-                        {/* Right column (Flowchart overview) */}
-                        <div className="lg:col-span-4 p-6 md:p-8 bg-amber-50/5 flex flex-col justify-between space-y-6 border-t-2 lg:border-t-0 border-black">
-                          {renderFlowchart()}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
                 ) : (
-                  /* LEVEL A: Eligible pathways grid (The original checklist) */
-                  <div className="space-y-6 animate-fade-in">
-                    {/* Top Back navigation */}
-                    <div className="flex justify-start mb-2">
-                      <button 
-                        onClick={() => {
-                          setIsGradFunnelActive(false);
-                          setSelectedPathway(null);
-                          setSelected12thStream(null);
-                          setSelectedGraduationDegree(null);
-                          setSelectedSpecCourse(null);
-                          setSelectedJobDetail(null);
-                        }}
-                        className="px-6 py-3 bg-[#0F172A] text-white hover:bg-black border-2 border-black font-display font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all cursor-pointer"
-                      >
-                        ← Back to Stream / Group Selection
-                      </button>
-                    </div>
-
-                    <div className="border-2 border-black bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
-                      {/* Standalone 100% full-screen title panel */}
-                      <div className="bg-black text-white p-6 md:p-8 border-b-2 border-black text-left">
-                        <span className="text-[10px] uppercase font-bold text-yellow-300 font-mono tracking-widest block mb-1">
-                          Graduation Path Funnel - Interactive Stream Link
-                        </span>
-                        <h2 className="text-3xl md:text-4xl font-display font-black uppercase">
-                          Eligible Graduation Pathways for {getStreamKey(selectedPathway.name) === 'MPC' ? 'MPC Standard' : getStreamKey(selectedPathway.name) === 'BiPC' ? 'BiPC Standard' : getStreamKey(selectedPathway.name) === 'MEC_CEC' ? 'CEC / MEC Accountancy' : getStreamKey(selectedPathway.name) === 'POLY' ? 'Polytechnic Engineering' : selectedPathway.name}
-                        </h2>
-                        <p className="text-xs text-neutral-400 mt-2 font-mono font-bold uppercase tracking-wider">
-                          Select a graduation stream node on the left to reveal specialized branches, peer feedbacks, and explore target career media.
-                        </p>
-                      </div>
-
-                      {/* 100% width workspace grid split */}
-                      <div className="grid grid-cols-1 lg:grid-cols-12 divide-y-2 lg:divide-y-0 lg:divide-x-2 divide-black bg-white">
-                        
-                        {/* Left Workspace (Choices Grid - 8 cols) */}
-                        <div className="lg:col-span-8 p-6 md:p-8 space-y-6 text-left">
-                          <div className="bg-emerald-50 border-2 border-black p-4 text-black text-xs rounded-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                            <span className="font-mono font-bold block uppercase mb-1 text-emerald-800">ADVISOR ELIGIBILITY MAPPING RULE:</span>
-                            These university courses are strictly verified and locked down based on your underlying foundation stream: <strong className="underline">{selectedPathway.name}</strong>.
-                          </div>
-
-                          {/* Highly scannable clean neo-brutalist grid of options */}
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {(() => {
-                              const sKey = getStreamKey(selectedPathway.name) || 'MPC';
-                              const degrees = ELIGIBILITY_MATRIX[sKey] || [];
-                              if (degrees.length === 0) {
-                                return (
-                                  <div className="md:col-span-2 text-center py-10 bg-stone-100 border-2 border-dashed border-black">
-                                    <p className="text-xs uppercase font-mono font-black text-gray-400">No eligibility options coded for this stream.</p>
-                                  </div>
-                                );
-                              }
-                              return degrees.map((degree) => {
-                                const isSelectedDegree = selectedGraduationDegree?.name === degree.name;
-                                return (
-                                  <div
-                                    key={degree.name}
-                                    onClick={() => setSelectedGraduationDegree(degree)}
-                                    className={`cursor-pointer p-5 border-2 border-black transition-all hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none relative flex flex-col justify-between ${
-                                      isSelectedDegree
-                                        ? 'bg-[#8B5CF6] text-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
-                                        : 'bg-stone-50 hover:bg-stone-100 text-black border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
-                                    }`}
-                                  >
-                                    <div className="space-y-3">
-                                      <div className="flex justify-between items-center gap-2">
-                                        <span className={`text-[9px] font-mono font-black border px-2 py-0.5 ${
-                                          isSelectedDegree 
-                                            ? 'bg-yellow-300 border-black text-black' 
-                                            : 'bg-white border-black/10 text-gray-650'
-                                        }`}>
-                                          🕒 {degree.duration} PROGRAMME
-                                        </span>
-                                      </div>
-                                      <h4 className="font-display font-black uppercase text-base tracking-tight leading-tight">
-                                        {degree.name}
-                                      </h4>
-                                      <p className="text-xs leading-relaxed font-semibold text-neutral-600">
-                                        {degree.description}
-                                      </p>
-                                    </div>
-
-                                    <div className="mt-5 border-t border-dashed border-black/20 pt-4 space-y-3">
-                                      <div>
-                                        <span className="text-[8.5px] font-mono font-black block uppercase tracking-wider mb-2 text-slate-500">
-                                          Target career job roles:
-                                        </span>
-                                        <div className="flex flex-wrap gap-1.5">
-                                          {degree.careers.map((career) => (
-                                            <span
-                                              key={career}
-                                              className="text-[9.5px] font-mono font-black px-2 py-0.5 border bg-white border-black/10 text-neutral-750"
-                                            >
-                                              💼 {career}
-                                            </span>
-                                          ))}
-                                        </div>
-                                      </div>
-
-                                      <div className="bg-[#8B5CF6] hover:bg-black text-white text-[10px] font-mono font-black uppercase tracking-wider border border-black p-2 text-center transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                                        Explore Focus Branches & Careers →
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              });
-                            })()}
-                          </div>
-                        </div>
-
-                        {/* Right Workspace (Flowchart - 4 cols) */}
-                        <div className="lg:col-span-4 p-6 md:p-8 bg-amber-50/5 flex flex-col justify-between space-y-6 border-t-2 lg:border-t-0 border-black">
-                          {renderFlowchart()}
-                        </div>
-
-                      </div>
-                    </div>
-                  </div>
+                  /* STEP 3 & STEP 4: STREAM CLASSIFIER & COURSES LAYER */
+                  <StreamClassifierView
+                    groupName={selected12thStream || (selectedPathway.name ? selectedPathway.name.replace(/^Intermediate\s*/i, '').split(' (')[0] : 'MPC')}
+                    groupCode={selectedPathway.id}
+                    educationLevel={activeLevel as '10th' | '12th'}
+                    qualificationType={selected12thType || (selectedPathway.category === 'Engineering' || selectedPathway.name.includes('Diploma') ? 'Polytechnic' : 'Intermediate')}
+                    selectedStreamId={selectedStreamCategory}
+                    onSelectStream={(streamId) => setSelectedStreamCategory(streamId)}
+                    onSelectCourse={(course) => setSelectedSpecCourse(course)}
+                    onBackToGroups={() => {
+                      setIsGradFunnelActive(false);
+                      setSelectedPathway(null);
+                      setSelected12thStream(null);
+                      setSelectedStreamCategory(null);
+                      setSelectedGraduationDegree(null);
+                      setSelectedSpecCourse(null);
+                      setSelectedJobDetail(null);
+                    }}
+                    onResetAll={() => {
+                      setIsGradFunnelActive(false);
+                      setSelectedPathway(null);
+                      setSelected12thStream(null);
+                      setSelected12thType(null);
+                      setSelectedStreamCategory(null);
+                      setSelectedGraduationDegree(null);
+                      setSelectedSpecCourse(null);
+                      setSelectedJobDetail(null);
+                    }}
+                  />
                 )}
+                </div>
+
+                {/* Persistent Progression Flowchart Companion: Stays with student through Stream, Courses, and Job Details! */}
+                <div className="xl:col-span-4 sticky top-6 space-y-4">
+                  {renderFlowchart()}
+                </div>
               </div>
             ) : (
               <div className="space-y-6">
@@ -11900,7 +11800,7 @@ export default function App() {
                     onClick={() => setSelectedPathway(null)}
                     className="px-6 py-3 bg-[#0F172A] text-white hover:bg-black border-2 border-black font-display font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all cursor-pointer"
                   >
-                    ← Back to Pathways Grid
+                    {t('pathwayDetails.backToGrid', '← Back to Pathways Grid')}
                   </button>
                 </div>
 
@@ -11910,7 +11810,7 @@ export default function App() {
                   <div className="bg-black text-white p-6 md:p-8 border-b-2 border-black flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-left">
                     <div>
                       <span className="text-[10px] uppercase font-bold text-yellow-300 font-mono tracking-widest">
-                        Selected Branch: {selectedPathway.level} Level - {selectedPathway.category}
+                        {t('pathwayDetails.selectedBranch', 'Selected Branch: {{level}} Level - {{category}}', { level: selectedPathway.level, category: selectedPathway.category })}
                       </span>
                       <h2 className="text-3xl md:text-4xl font-display font-black uppercase mt-1">
                         {selectedPathway.name}
@@ -11924,7 +11824,7 @@ export default function App() {
                         title="Save Pathways"
                       >
                         <Bookmark className="w-4 h-4 mr-1 fill-current" />
-                        {savedPathIds.includes(selectedPathway.id) ? 'Bookmarked' : 'Save Path'}
+                        {savedPathIds.includes(selectedPathway.id) ? t('pathwayDetails.bookmarked', 'Bookmarked') : t('pathwayDetails.savePath', 'Save Path')}
                       </button>
                       <button 
                         onClick={() => setSelectedPathway(null)}
@@ -11939,22 +11839,28 @@ export default function App() {
                   <div className="bg-amber-400 text-black p-5 border-b-2 border-black flex flex-col sm:flex-row justify-between items-center gap-4 text-left">
                     <div className="flex items-center gap-3">
                       <div className="bg-black text-white p-2 border border-black font-mono font-black text-xs uppercase shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]">
-                        STEP 03
+                        {t('pathwayDetails.step3Badge', 'STEP 03')}
                       </div>
                       <div>
                         <h3 className="font-display font-black uppercase text-sm md:text-base leading-tight">
-                          Choose Your Collegiate Degree target
+                          {t('pathwayDetails.chooseDegreeTitle', 'Choose Your Collegiate Degree target')}
                         </h3>
                         <p className="text-[11px] font-bold text-zinc-950 leading-snug">
-                          Your chosen pathway has high-compatibility degree avenues. Lock down your target graduation stream.
+                          {t('pathwayDetails.degreeSubtitle', 'Your chosen pathway has high-compatibility degree avenues. Lock down your target graduation stream.')}
                         </p>
                       </div>
                     </div>
                     <button
-                      onClick={() => setIsGradFunnelActive(true)}
+                      onClick={() => {
+                        setSelectedStreamCategory(null);
+                        setSelectedGraduationDegree(null);
+                        setSelectedSpecCourse(null);
+                        setSelectedJobDetail(null);
+                        setIsGradFunnelActive(true);
+                      }}
                       className="px-5 py-2.5 bg-black text-white hover:bg-neutral-900 font-extrabold font-display uppercase text-xs tracking-wider border-2 border-black shadow-[4px_4px_0px_0px_rgba(255,255,255,1)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
                     >
-                      Choose Your Graduation/Degree Track →
+                      Explore Higher-Ed Streams & Degrees →
                     </button>
                   </div>
 
@@ -11966,26 +11872,26 @@ export default function App() {
                       
                       {/* Duration & Eligibility details */}
                       <div className="border-2 border-black p-4 bg-zinc-50 text-black">
-                        <h4 className="text-[11px] font-black uppercase tracking-widest text-blue-700 mb-3 font-mono">Duration & Eligibility</h4>
+                        <h4 className="text-[11px] font-black uppercase tracking-widest text-blue-700 mb-3 font-mono">{t('pathwayDetails.durationAndEligibility', 'Duration & Eligibility')}</h4>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="border border-black p-3 bg-white">
-                            <span className="text-[10px] uppercase font-bold tracking-tight text-zinc-700 font-mono">Duration</span>
+                            <span className="text-[10px] uppercase font-bold tracking-tight text-zinc-700 font-mono">{t('pathwayDetails.duration', 'Duration')}</span>
                             <p className="text-sm font-black font-mono mt-1 text-black">{selectedPathway.duration}</p>
                           </div>
                           <div className="border border-black p-3 bg-white">
-                            <span className="text-[10px] uppercase font-bold tracking-tight text-zinc-700 font-mono">Avg Fees</span>
+                            <span className="text-[10px] uppercase font-bold tracking-tight text-zinc-700 font-mono">{t('pathwayDetails.avgFees', 'Avg Fees')}</span>
                             <p className="text-sm font-black font-mono mt-1 text-black">{selectedPathway.estimatedFees}</p>
                           </div>
                         </div>
                         <div className="border border-black p-3 bg-white mt-3">
-                          <span className="text-[10px] uppercase font-bold tracking-tight text-zinc-700 font-mono">Eligibility Criteria</span>
+                          <span className="text-[10px] uppercase font-bold tracking-tight text-zinc-700 font-mono">{t('pathwayDetails.eligibilityCriteria', 'Eligibility Criteria')}</span>
                           <p className="text-xs font-bold leading-relaxed mt-1 text-black">{selectedPathway.eligibility}</p>
                         </div>
                       </div>
 
                       {/* Highlighted Core Subjects */}
                       <div className="border-2 border-black p-4 bg-emerald-50/40 text-black">
-                        <h4 className="text-[11px] font-black uppercase tracking-widest text-emerald-700 mb-3 font-mono">Highlighted Core Subjects</h4>
+                        <h4 className="text-[11px] font-black uppercase tracking-widest text-emerald-700 mb-3 font-mono">{t('pathwayDetails.highlightedSubjects', 'Highlighted Core Subjects')}</h4>
                         <div className="flex flex-wrap gap-2">
                           {selectedPathway.subjects.map(subject => (
                             <span key={subject} className="text-xs font-bold px-3.5 py-1.5 bg-emerald-100/70 border border-black text-black">
@@ -11997,7 +11903,7 @@ export default function App() {
 
                       {/* Higher Education Pathways in Detail */}
                       <div className="border-2 border-black p-4 bg-amber-50/40 text-black">
-                        <h4 className="text-[11px] font-black uppercase tracking-widest text-amber-700 mb-2 font-mono">Higher Education Options</h4>
+                        <h4 className="text-[11px] font-black uppercase tracking-widest text-amber-700 mb-2 font-mono">{t('pathwayDetails.higherEducationOptions', 'Higher Education Options')}</h4>
                         <ul className="space-y-1.5 text-xs">
                           {selectedPathway.higherEducationOptions.map((opt, i) => (
                             <li key={i} className="flex items-start gap-2 py-0.5">
@@ -12011,7 +11917,7 @@ export default function App() {
                       {/* Rich descriptive summary layout */}
                       <div className="border-2 border-black bg-yellow-50 p-4 rounded text-black">
                         <h4 className="text-xs font-black uppercase mb-1.5 flex items-center gap-1.5 text-black">
-                          <BookOpen className="w-4 h-4 text-black" /> Academic Overview
+                          <BookOpen className="w-4 h-4 text-black" /> {t('pathwayDetails.academicOverview', 'Academic Overview')}
                         </h4>
                         <p className="text-xs text-zinc-950 font-semibold leading-relaxed font-sans">{selectedPathway.description}</p>
                       </div>
@@ -12024,9 +11930,9 @@ export default function App() {
                       <div className="space-y-6">
                         <div className="flex justify-between items-center border-b border-black pb-3">
                           <h4 className="text-sm font-black uppercase tracking-tight text-black">
-                            Alumni Insights ({dbFeedbacks.filter(f => isCourseIdEquivalent(f.courseId, selectedPathway.id)).length})
+                            {t('pathwayDetails.alumniInsightsCount', 'Alumni Insights ({{count}})', { count: dbFeedbacks.filter(f => isCourseIdEquivalent(f.courseId, selectedPathway.id)).length })}
                           </h4>
-                          <span className="text-[9px] font-mono bg-blue-100 text-blue-900 px-1.5 py-0.5 border border-black uppercase font-extrabold">Verified Mentors Only</span>
+                          <span className="text-[9px] font-mono bg-blue-100 text-blue-900 px-1.5 py-0.5 border border-black uppercase font-extrabold">{t('pathwayDetails.verifiedMentorsOnly', 'Verified Mentors Only')}</span>
                         </div>
 
                         {feedbackLoading ? (
@@ -12034,8 +11940,8 @@ export default function App() {
                         ) : dbFeedbacks.filter(f => isCourseIdEquivalent(f.courseId, selectedPathway.id)).length === 0 ? (
                           <div className="text-center py-12">
                             <GraduationCap className="w-12 h-12 stroke-1 text-zinc-400 mx-auto mb-2" />
-                            <p className="text-xs text-black uppercase font-black tracking-widest">No alumni insights submitted yet.</p>
-                            <p className="text-[10px] text-gray-500 mt-1">Be the first to share your post-degree insights!</p>
+                            <p className="text-xs text-black uppercase font-black tracking-widest">{t('pathwayDetails.noAlumniInsights', 'No alumni insights submitted yet.')}</p>
+                            <p className="text-[10px] text-gray-500 mt-1">{t('pathwayDetails.beFirstAlumni', 'Be the first to share your post-degree insights!')}</p>
                           </div>
                         ) : (
                           <div className="space-y-6 max-h-[500px] overflow-y-auto pr-2">
@@ -12418,7 +12324,7 @@ export default function App() {
               )}
             </div>
 
-            <div className="h-[650px] flex flex-col md:flex-row border-2 border-black bg-white shadow-[8px_8px_0px_0px_#000] overflow-hidden">
+            <div className="h-[calc(100vh-210px)] min-h-[480px] md:h-[650px] flex flex-col md:flex-row border-2 border-black bg-white shadow-[4px_4px_0px_0px_#000] md:shadow-[8px_8px_0px_0px_#000] overflow-hidden">
             
             {/* Sidebar Threads list */}
             <div className={`w-full md:w-80 border-black md:border-r-2 flex flex-col h-full ${activeThreadId ? 'hidden md:flex' : 'flex'}`}>
@@ -13357,51 +13263,102 @@ export default function App() {
         )}
 
         {/* 7. ABOUT DIRPA DEDICATED VIEW */}
-        {user && currentView === 'about' && (
-          <div className="max-w-7xl mx-auto px-6 py-10 space-y-10 animate-fade-in transition-colors duration-150">
+        {currentView === 'about' && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-10 space-y-10 animate-fade-in transition-colors duration-150">
             
             {/* Header / Mission Hero Card */}
-            <div className="border-2 border-black dark:border-zinc-700 bg-[#FCFBF8] dark:bg-zinc-900 p-6 md:p-10 flex flex-col md:flex-row gap-8 items-center shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+            <div className="border-2 border-black dark:border-zinc-700 bg-[#FCFBF8] dark:bg-zinc-900 p-6 sm:p-8 md:p-10 flex flex-col lg:flex-row gap-8 items-start lg:items-center shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
               <div className="flex-1 space-y-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-black text-rose-600 dark:text-rose-400 uppercase tracking-widest block font-mono bg-rose-50 dark:bg-rose-950/60 px-2.5 py-1 border border-rose-200 dark:border-rose-900 rounded">DIRPA FOUNDATION & PLATFORM</span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-black text-rose-600 dark:text-rose-400 uppercase tracking-widest font-mono bg-rose-50 dark:bg-rose-950/60 px-2.5 py-1 border border-rose-200 dark:border-rose-900 rounded">
+                    {t('about.ecosystemBadge', 'DIRPA FOUNDATION & ECOSYSTEM')}
+                  </span>
+                  <span className="text-[11px] font-mono font-bold bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-700 px-2 py-0.5 rounded">
+                    {t('about.freeOpenAccess', '⚡ 100% Free & Open-Access')}
+                  </span>
                 </div>
-                <h1 className="text-4xl md:text-5xl font-display font-black uppercase text-[#1A1A1A] dark:text-[#F3F4F6] tracking-tight leading-none">
+
+                <h1 className="text-3xl sm:text-4xl md:text-5xl font-display font-black uppercase text-[#1A1A1A] dark:text-[#F3F4F6] tracking-tight leading-none">
                   {t('about.title', 'About DIRPA Foundation')} <br/>
-                  <span className="text-amber-600 dark:text-amber-400 text-3xl md:text-4xl">Discover Your Path</span>
+                  <span className="text-amber-600 dark:text-amber-400 text-2xl sm:text-3xl md:text-4xl">{t('about.discoverYourPath', 'Discover Your Path')}</span>
                 </h1>
+
                 <p className="text-xs font-mono font-bold text-gray-500 dark:text-zinc-400 uppercase">
                   {t('about.subtitle', 'Dynamic Interactive Roadmap & Placement Advisor')}
                 </p>
+
                 <div className="h-0.5 bg-black dark:bg-zinc-700 w-24"></div>
-                <p className="text-sm text-gray-700 dark:text-zinc-300 leading-relaxed font-semibold max-w-2xl">
-                  {t('about.heroDesc', 'DIRPA is an all-in-one academic and career guidance platform engineered to empower students across 10th standard, 12th standard (MPC, BiPC, CEC, HEC), Polytechnic, and Higher Education. We bridge the information gap with verified scholarships, multilingual accessibility, real-time job market salary data, entrance exam hubs, and alumni mentorship.')}
+
+                <p className="text-xs sm:text-sm text-gray-700 dark:text-zinc-300 leading-relaxed font-semibold max-w-2xl">
+                  {t('about.heroDesc', 'DIRPA is an all-in-one academic, career, and collegiate navigation ecosystem engineered to democratize educational guidance for Indian students across 10th standard, 12th standard (MPC, BiPC, CEC, HEC), Polytechnic, and University Degrees. We bridge the critical information divide with verified scholarships, entrance exam dossiers, dual-market salary data, peer-to-peer textbook swapping, micro-learning feeds, top corporate culture profiles, and direct 1-on-1 alumni mentorship.')}
                 </p>
+
+                {/* Quick Action Navigation Buttons */}
+                <div className="pt-2 flex flex-wrap gap-2 text-xs font-mono font-bold">
+                  <button
+                    onClick={() => { setSelectedNav('home'); setCurrentView('dashboard'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    className="px-3 py-1.5 bg-black text-white dark:bg-white dark:text-black border border-black hover:bg-amber-400 hover:text-black transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] uppercase text-[11px]"
+                  >
+                    {t('about.exploreStreamsBtn', 'Explore Streams ➔')}
+                  </button>
+                  <button
+                    onClick={() => { setSelectedNav('scholarships'); setCurrentView('scholarships'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    className="px-3 py-1.5 bg-amber-400 text-black border border-black hover:bg-amber-300 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] uppercase text-[11px]"
+                  >
+                    {t('about.scholarshipsBtn', 'Scholarships 🎓')}
+                  </button>
+                  <button
+                    onClick={() => { setSelectedNav('entrance-exams'); setCurrentView('entrance-exams'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    className="px-3 py-1.5 bg-rose-500 text-white border border-black hover:bg-rose-400 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] uppercase text-[11px]"
+                  >
+                    {t('about.entranceExamsBtn', 'Entrance Exams ⚡')}
+                  </button>
+                  <button
+                    onClick={() => { setSelectedNav('stuff'); setCurrentView('stuff'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    className="px-3 py-1.5 bg-emerald-400 text-black border border-black hover:bg-emerald-300 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] uppercase text-[11px]"
+                  >
+                    {t('about.studentStuffBtn', 'Student Stuff 📦')}
+                  </button>
+                </div>
               </div>
-              <div className="w-full md:w-1/3 border-2 border-black dark:border-zinc-700 p-6 bg-amber-50 dark:bg-zinc-800 text-[#1A1A1A] dark:text-[#F3F4F6] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+
+              {/* Platform Metrics Card */}
+              <div className="w-full lg:w-80 border-2 border-black dark:border-zinc-700 p-6 bg-amber-50 dark:bg-zinc-800 text-[#1A1A1A] dark:text-[#F3F4F6] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] shrink-0">
                 <h4 className="text-sm font-black uppercase mb-3 text-amber-900 dark:text-yellow-400 flex items-center gap-1.5 font-mono">
-                  <span>{t('about.quickStats', '⚡ Platform Highlights')}</span>
+                  <span>{t('about.livePlatformMetrics', '⚡ Live Platform Metrics')}</span>
                 </h4>
                 <ul className="space-y-2 text-xs font-mono">
                   <li className="flex justify-between border-b border-black/10 dark:border-white/10 pb-1">
-                    <span>{t('about.activeBranches', 'Academic Branches:')}</span>
-                    <span className="font-bold">48+ Streams</span>
+                    <span>{t('about.academicStreamsLabel', 'Academic Streams:')}</span>
+                    <span className="font-bold">{t('about.academicStreamsVal', '48+ Tracks')}</span>
                   </li>
                   <li className="flex justify-between border-b border-black/10 dark:border-white/10 pb-1">
-                    <span>{t('nav.scholarships', 'Scholarships')}:</span>
-                    <span className="font-bold text-amber-700 dark:text-amber-400">Verified DB + AI</span>
+                    <span>{t('about.verifiedScholarshipsLabel', 'Verified Scholarships:')}</span>
+                    <span className="font-bold text-amber-700 dark:text-amber-400">{t('about.verifiedScholarshipsVal', '150+ Schemes')}</span>
                   </li>
                   <li className="flex justify-between border-b border-black/10 dark:border-white/10 pb-1">
-                    <span>{t('nav.language', 'Language')}:</span>
-                    <span className="font-bold text-blue-700 dark:text-blue-400">7+ Languages</span>
+                    <span>{t('about.entranceExamsLabel', 'Entrance Exam Portals:')}</span>
+                    <span className="font-bold text-rose-600 dark:text-rose-400">{t('about.entranceExamsVal', '50+ Exams')}</span>
                   </li>
                   <li className="flex justify-between border-b border-black/10 dark:border-white/10 pb-1">
-                    <span>{t('nav.jobInformation', 'Job Information')}:</span>
-                    <span className="font-bold">Indian (₹) & US Data</span>
+                    <span>{t('about.hiringCompaniesLabel', 'Hiring Companies:')}</span>
+                    <span className="font-bold text-blue-700 dark:text-blue-400">{t('about.hiringCompaniesVal', '15+ Employers')}</span>
+                  </li>
+                  <li className="flex justify-between border-b border-black/10 dark:border-white/10 pb-1">
+                    <span>{t('about.verifiedMentorsLabel', 'Verified Mentors:')}</span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">{t('about.verifiedMentorsVal', '250+ Alumni')}</span>
+                  </li>
+                  <li className="flex justify-between border-b border-black/10 dark:border-white/10 pb-1">
+                    <span>{t('about.languageInclusivityLabel', 'Language Inclusivity:')}</span>
+                    <span className="font-bold text-purple-700 dark:text-purple-400">{t('about.languageInclusivityVal', '4 Languages')}</span>
+                  </li>
+                  <li className="flex justify-between border-b border-black/10 dark:border-white/10 pb-1">
+                    <span>{t('about.studentStuffHubLabel', 'Student Stuff Hub:')}</span>
+                    <span className="font-bold text-emerald-700 dark:text-emerald-400">{t('about.studentStuffHubVal', 'Free Exchange')}</span>
                   </li>
                   <li className="flex justify-between font-bold pt-1">
-                    <span>{t('about.verifiedMentors', 'Verified Mentors:')}</span>
-                    <span className="text-emerald-600 dark:text-emerald-400">250+ Alumni</span>
+                    <span>{t('about.dirpaBulletsLabel', 'DIRPA Bullets:')}</span>
+                    <span className="text-amber-600 dark:text-amber-400">{t('about.dirpaBulletsVal', 'Micro-Learning')}</span>
                   </li>
                 </ul>
               </div>
@@ -13411,109 +13368,499 @@ export default function App() {
             <div className="space-y-4">
               <div className="border-b-2 border-black dark:border-zinc-700 pb-2 flex items-center justify-between">
                 <div>
-                  <span className="text-xs font-mono font-black uppercase text-amber-700 dark:text-amber-400 tracking-wider">// CORE INTEGRATED MODULES</span>
-                  <h2 className="text-2xl font-display font-black uppercase text-black dark:text-white">What DIRPA Delivers</h2>
+                  <span className="text-xs font-mono font-black uppercase text-amber-700 dark:text-amber-400 tracking-wider">
+                    {t('about.integratedCapabilities', '// INTEGRATED CAPABILITIES')}
+                  </span>
+                  <h2 className="text-2xl md:text-3xl font-display font-black uppercase text-black dark:text-white">
+                    {t('about.whatWeHaveBuilt', 'What We Have Built in DIRPA')}
+                  </h2>
                 </div>
+                <span className="text-xs font-mono bg-stone-200 dark:bg-zinc-800 px-2.5 py-1 border border-black font-bold uppercase hidden sm:inline-block">
+                  {t('about.tenCoreSystems', '10 Core Systems')}
+                </span>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 
-                {/* Module 1: Scholarships */}
+                {/* Module 1: Scholarships Hub */}
                 <div className="border-2 border-black dark:border-zinc-700 bg-white dark:bg-zinc-800 p-6 flex flex-col justify-between shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
                   <div className="space-y-3">
                     <div className="w-11 h-11 rounded-xl bg-amber-100 dark:bg-amber-900/40 border-2 border-black dark:border-zinc-700 flex items-center justify-center text-amber-800 dark:text-amber-300 text-xl font-bold">
                       🎓
                     </div>
-                    <h3 className="text-lg font-black uppercase text-[#1A1A1A] dark:text-[#F3F4F6]">{t('scholarships.title', 'Verified Scholarships Hub')}</h3>
-                    <p className="text-xs text-gray-600 dark:text-zinc-300 leading-relaxed font-semibold">
-                      Comprehensive database of State, Central, and Private scholarships. Filter by family income cap, minimum percentage marks, and education level. Includes official NSP/ePASS links, required document checklists, and personalized AI scholarship guidance.
-                    </p>
-                  </div>
-                  <div className="mt-4 pt-3 border-t border-dashed border-black/10 dark:border-white/10 text-[10px] font-mono font-bold text-amber-700 dark:text-amber-400 uppercase">
-                    FINANCIAL ASSISTANCE ENGINE
-                  </div>
-                </div>
-
-                {/* Module 2: Multilingual Support */}
-                <div className="border-2 border-black dark:border-zinc-700 bg-white dark:bg-zinc-800 p-6 flex flex-col justify-between shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                  <div className="space-y-3">
-                    <div className="w-11 h-11 rounded-xl bg-blue-100 dark:bg-blue-900/40 border-2 border-black dark:border-zinc-700 flex items-center justify-center text-blue-800 dark:text-blue-300 text-xl font-bold">
-                      🌐
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-black uppercase text-[#1A1A1A] dark:text-[#F3F4F6]">
+                        {t('about.module1Title', 'Verified Scholarships Hub')}
+                      </h3>
+                      <span className="text-[10px] font-mono font-bold bg-amber-100 text-amber-900 px-2 py-0.5 border border-amber-300 rounded">
+                        {t('about.module1Badge', 'AI-Matched')}
+                      </span>
                     </div>
-                    <h3 className="text-lg font-black uppercase text-[#1A1A1A] dark:text-[#F3F4F6]">{t('nav.multilingual', 'Multilingual Accessibility')}</h3>
                     <p className="text-xs text-gray-600 dark:text-zinc-300 leading-relaxed font-semibold">
-                      Full internationalization across English, Hindi (हिंदी), Telugu (తెలుగు), Tamil (தமிழ்), Kannada (ಕನ್ನಡ), Marathi (మరాఠీ), and Bengali (బెంగాలీ). Ensures students and parents from diverse regional backgrounds can navigate career choices effortlessly.
+                      {t('about.module1Desc', 'Curated registry of Central, State, and Corporate scholarships (NSP, ePASS, Reliance Foundation, HDFC Badhte Kadam, Tata Capital, and AICTE Pragati/Saksham). Filter by family income caps, minimum marks, category, and education level with document checklists and official portal links.')}
                     </p>
                   </div>
-                  <div className="mt-4 pt-3 border-t border-dashed border-black/10 dark:border-white/10 text-[10px] font-mono font-bold text-blue-700 dark:text-blue-400 uppercase">
-                    INCLUSIVE i18n LOCALIZATION
+                  <div className="mt-4 pt-3 border-t border-dashed border-black/10 dark:border-white/10 flex items-center justify-between">
+                    <span className="text-[10px] font-mono font-bold text-amber-700 dark:text-amber-400 uppercase">
+                      {t('about.module1Tag', 'FINANCIAL AID ENGINE')}
+                    </span>
+                    <button
+                      onClick={() => { setSelectedNav('scholarships'); setCurrentView('scholarships'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                      className="text-[11px] font-mono font-bold underline hover:text-amber-600 dark:hover:text-amber-400 cursor-pointer"
+                    >
+                      {t('about.module1Action', 'Explore ➔')}
+                    </button>
                   </div>
                 </div>
 
-                {/* Module 3: Job & Market Information */}
-                <div className="border-2 border-black dark:border-zinc-700 bg-white dark:bg-zinc-800 p-6 flex flex-col justify-between shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                  <div className="space-y-3">
-                    <div className="w-11 h-11 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 border-2 border-black dark:border-zinc-700 flex items-center justify-center text-emerald-800 dark:text-emerald-300 text-xl font-bold">
-                      💼
-                    </div>
-                    <h3 className="text-lg font-black uppercase text-[#1A1A1A] dark:text-[#F3F4F6]">{t('nav.jobInformation', 'Job Market & Salary Explorer')}</h3>
-                    <p className="text-xs text-gray-600 dark:text-zinc-300 leading-relaxed font-semibold">
-                      Dual market intelligence covering both the Indian Job Market (INR ₹ salary estimates, required skills, NCO qualification levels) and U.S. O*NET Department of Labor data with live search grounding and skill breakdowns.
-                    </p>
-                  </div>
-                  <div className="mt-4 pt-3 border-t border-dashed border-black/10 dark:border-white/10 text-[10px] font-mono font-bold text-emerald-700 dark:text-emerald-400 uppercase">
-                    CAREER & SALARY INTELLIGENCE
-                  </div>
-                </div>
-
-                {/* Module 4: Interactive Academic Roadmaps */}
-                <div className="border-2 border-black dark:border-zinc-700 bg-white dark:bg-zinc-800 p-6 flex flex-col justify-between shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                  <div className="space-y-3">
-                    <div className="w-11 h-11 rounded-xl bg-purple-100 dark:bg-purple-900/40 border-2 border-black dark:border-zinc-700 flex items-center justify-center text-purple-800 dark:text-purple-300 text-xl font-bold">
-                      🗺️
-                    </div>
-                    <h3 className="text-lg font-black uppercase text-[#1A1A1A] dark:text-[#F3F4F6]">{t('about.interactiveRoadmapsTitle', 'Interactive Academic Streams')}</h3>
-                    <p className="text-xs text-gray-600 dark:text-zinc-300 leading-relaxed font-semibold">
-                      {t('about.interactiveRoadmapsDesc', 'Step-by-step guidance for 10th and 12th standards (MPC, BiPC, CEC, HEC), Polytechnic Diplomas, professional courses, and university degrees. Visual pathfinding matching student strengths to higher education outcomes.')}
-                    </p>
-                  </div>
-                  <div className="mt-4 pt-3 border-t border-dashed border-black/10 dark:border-white/10 text-[10px] font-mono font-bold text-purple-700 dark:text-purple-400 uppercase">
-                    VISUAL DISCOVERY ENGINE
-                  </div>
-                </div>
-
-                {/* Module 5: Entrance Exams Hub */}
+                {/* Module 2: Entrance Exams Hub */}
                 <div className="border-2 border-black dark:border-zinc-700 bg-white dark:bg-zinc-800 p-6 flex flex-col justify-between shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
                   <div className="space-y-3">
                     <div className="w-11 h-11 rounded-xl bg-rose-100 dark:bg-rose-900/40 border-2 border-black dark:border-zinc-700 flex items-center justify-center text-rose-800 dark:text-rose-300 text-xl font-bold">
                       ⚡
                     </div>
-                    <h3 className="text-lg font-black uppercase text-[#1A1A1A] dark:text-[#F3F4F6]">{t('nav.entranceExams', 'Entrance Exams Info Center')}</h3>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-black uppercase text-[#1A1A1A] dark:text-[#F3F4F6]">
+                        {t('about.module2Title', 'Entrance Exams Portal')}
+                      </h3>
+                      <span className="text-[10px] font-mono font-bold bg-rose-100 text-rose-900 px-2 py-0.5 border border-rose-300 rounded">
+                        {t('about.module2Badge', 'National & State')}
+                      </span>
+                    </div>
                     <p className="text-xs text-gray-600 dark:text-zinc-300 leading-relaxed font-semibold">
-                      Dedicated portal for national and state entrance exams (JEE, NEET, EAMCET, CLAT, CUET, POLYCET). Access syllabus patterns, expected test dates, category fees, required documents, and accepting colleges.
+                      {t('about.module2Desc', 'Dedicated dossier for major competitive examinations including JEE Main/Advanced, NEET, AP/TS EAMCET, CUET, CLAT, POLYCET, NATA, and BITSAT. Outlines syllabus patterns, test dates, registration fees, reservation criteria, and accepting colleges.')}
                     </p>
                   </div>
-                  <div className="mt-4 pt-3 border-t border-dashed border-black/10 dark:border-white/10 text-[10px] font-mono font-bold text-rose-700 dark:text-rose-400 uppercase">
-                    EXAM PREPARATION HUB
+                  <div className="mt-4 pt-3 border-t border-dashed border-black/10 dark:border-white/10 flex items-center justify-between">
+                    <span className="text-[10px] font-mono font-bold text-rose-700 dark:text-rose-400 uppercase">
+                      {t('about.module2Tag', 'EXAM ADMISSION BLUEPRINTS')}
+                    </span>
+                    <button
+                      onClick={() => { setSelectedNav('entrance-exams'); setCurrentView('entrance-exams'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                      className="text-[11px] font-mono font-bold underline hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer"
+                    >
+                      {t('about.module2Action', 'View Exams ➔')}
+                    </button>
                   </div>
                 </div>
 
-                {/* Module 6: Alumni Network & AI Advisor */}
+                {/* Module 3: DIRPA Stuff Hub */}
+                <div className="border-2 border-black dark:border-zinc-700 bg-white dark:bg-zinc-800 p-6 flex flex-col justify-between shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                  <div className="space-y-3">
+                    <div className="w-11 h-11 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 border-2 border-black dark:border-zinc-700 flex items-center justify-center text-emerald-800 dark:text-emerald-300 text-xl font-bold">
+                      📦
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-black uppercase text-[#1A1A1A] dark:text-[#F3F4F6]">
+                        {t('about.module3Title', 'DIRPA Stuff Hub')}
+                      </h3>
+                      <span className="text-[10px] font-mono font-bold bg-emerald-100 text-emerald-900 px-2 py-0.5 border border-emerald-300 rounded">
+                        {t('about.module3Badge', 'Free Exchange')}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-zinc-300 leading-relaxed font-semibold">
+                      {t('about.module3Desc', 'Student-to-student resource marketplace and free academic supply sharing. Facilitates textbook swaps, verified lecture notes, laboratory equipment, calculators, and exam kits without commercial middlemen.')}
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-dashed border-black/10 dark:border-white/10 flex items-center justify-between">
+                    <span className="text-[10px] font-mono font-bold text-emerald-700 dark:text-emerald-400 uppercase">
+                      {t('about.module3Tag', 'STUDENT RESOURCE SHARING')}
+                    </span>
+                    <button
+                      onClick={() => { setSelectedNav('stuff'); setCurrentView('stuff'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                      className="text-[11px] font-mono font-bold underline hover:text-emerald-600 dark:hover:text-emerald-400 cursor-pointer"
+                    >
+                      {t('about.module3Action', 'Open Stuff ➔')}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Module 4: DIRPA Bullets */}
+                <div className="border-2 border-black dark:border-zinc-700 bg-white dark:bg-zinc-800 p-6 flex flex-col justify-between shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                  <div className="space-y-3">
+                    <div className="w-11 h-11 rounded-xl bg-amber-100 dark:bg-amber-900/40 border-2 border-black dark:border-zinc-700 flex items-center justify-center text-amber-800 dark:text-amber-300 text-xl font-bold">
+                      ⚡
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-black uppercase text-[#1A1A1A] dark:text-[#F3F4F6]">
+                        {t('about.module4Title', 'DIRPA Bullets Feed')}
+                      </h3>
+                      <span className="text-[10px] font-mono font-bold bg-amber-100 text-amber-900 px-2 py-0.5 border border-amber-300 rounded">
+                        {t('about.module4Badge', 'Micro-Learning')}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-zinc-300 leading-relaxed font-semibold">
+                      {t('about.module4Desc', 'Bite-sized, high-yield academic news feed delivering exam strategies, urgent scholarship deadlines, collegiate survival advice, and career shortcuts. Includes category filtering, community upvoting, and personal bookmarking.')}
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-dashed border-black/10 dark:border-white/10 flex items-center justify-between">
+                    <span className="text-[10px] font-mono font-bold text-amber-700 dark:text-amber-400 uppercase">
+                      {t('about.module4Tag', 'RAPID ACADEMIC BRIEFS')}
+                    </span>
+                    <button
+                      onClick={() => { setSelectedNav('bullets'); setCurrentView('bullets'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                      className="text-[11px] font-mono font-bold underline hover:text-amber-600 dark:hover:text-amber-400 cursor-pointer"
+                    >
+                      {t('about.module4Action', 'Read Bullets ➔')}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Module 5: 1-on-1 Mentorship & Messaging */}
                 <div className="border-2 border-black dark:border-zinc-700 bg-white dark:bg-zinc-800 p-6 flex flex-col justify-between shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
                   <div className="space-y-3">
                     <div className="w-11 h-11 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 border-2 border-black dark:border-zinc-700 flex items-center justify-center text-indigo-800 dark:text-indigo-300 text-xl font-bold">
-                      🤝
+                      💬
                     </div>
-                    <h3 className="text-lg font-black uppercase text-[#1A1A1A] dark:text-[#F3F4F6]">{t('about.verifiedAlumniTitle', 'Alumni Network & AI Advisor')}</h3>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-black uppercase text-[#1A1A1A] dark:text-[#F3F4F6]">
+                        {t('about.module5Title', 'Direct 1-on-1 Mentorship')}
+                      </h3>
+                      <span className="text-[10px] font-mono font-bold bg-indigo-100 text-indigo-900 px-2 py-0.5 border border-indigo-300 rounded">
+                        {t('about.module5Badge', 'Real-Time Inbox')}
+                      </span>
+                    </div>
                     <p className="text-xs text-gray-600 dark:text-zinc-300 leading-relaxed font-semibold">
-                      {t('about.verifiedAlumniDesc', 'Connect with senior graduates for raw course reviews and direct 1-on-1 messaging. Complemented by our AI Career Advisor for personalized budget, location, and career goal recommendations.')}
+                      {t('about.module5Desc', 'Direct messaging channels connecting students directly to verified alumni mentors across engineering, medical, commerce, and diploma tracks. Ask candid questions about campus workload, faculty, and real placement reality.')}
                     </p>
                   </div>
-                  <div className="mt-4 pt-3 border-t border-dashed border-black/10 dark:border-white/10 text-[10px] font-mono font-bold text-indigo-700 dark:text-indigo-400 uppercase">
-                    MENTORSHIP & AI COUNSEL
+                  <div className="mt-4 pt-3 border-t border-dashed border-black/10 dark:border-white/10 flex items-center justify-between">
+                    <span className="text-[10px] font-mono font-bold text-indigo-700 dark:text-indigo-400 uppercase">
+                      {t('about.module5Tag', 'STUDENT-ALUMNI DIALOGUE')}
+                    </span>
+                    <button
+                      onClick={() => { setSelectedNav('messages'); setCurrentView('messages'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                      className="text-[11px] font-mono font-bold underline hover:text-indigo-600 dark:hover:text-indigo-400 cursor-pointer"
+                    >
+                      {t('about.module5Action', 'View Messages ➔')}
+                    </button>
                   </div>
                 </div>
 
+                {/* Module 6: Top Recruiting Companies */}
+                <div className="border-2 border-black dark:border-zinc-700 bg-white dark:bg-zinc-800 p-6 flex flex-col justify-between shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                  <div className="space-y-3">
+                    <div className="w-11 h-11 rounded-xl bg-blue-100 dark:bg-blue-900/40 border-2 border-black dark:border-zinc-700 flex items-center justify-center text-blue-800 dark:text-blue-300 text-xl font-bold">
+                      🏢
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-black uppercase text-[#1A1A1A] dark:text-[#F3F4F6]">
+                        {t('about.module6Title', 'Top Companies & Culture')}
+                      </h3>
+                      <span className="text-[10px] font-mono font-bold bg-blue-100 text-blue-900 px-2 py-0.5 border border-blue-300 rounded">
+                        {t('about.module6Badge', '₹ LPA & $ Salary')}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-zinc-300 leading-relaxed font-semibold">
+                      {t('about.module6Desc', "Profiles for 15+ premier recruiters (Google, Microsoft, Tata Motors, L&T, ISRO, TCS, Infosys, Deloitte, Qualcomm, Reliance, Dr. Reddy's) detailing engineering culture, interview tips from alumni, hiring pathways, and dual Indian & US salary compensation benchmarks.")}
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-dashed border-black/10 dark:border-white/10 flex items-center justify-between">
+                    <span className="text-[10px] font-mono font-bold text-blue-700 dark:text-blue-400 uppercase">
+                      {t('about.module6Tag', 'CORPORATE INTELLIGENCE')}
+                    </span>
+                    <button
+                      onClick={() => { setSelectedNav('companies'); setCurrentView('companies'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                      className="text-[11px] font-mono font-bold underline hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer"
+                    >
+                      {t('about.module6Action', 'Companies ➔')}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Module 7: Interactive Stream Roadmaps & Flowcharts */}
+                <div className="border-2 border-black dark:border-zinc-700 bg-white dark:bg-zinc-800 p-6 flex flex-col justify-between shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                  <div className="space-y-3">
+                    <div className="w-11 h-11 rounded-xl bg-purple-100 dark:bg-purple-900/40 border-2 border-black dark:border-zinc-700 flex items-center justify-center text-purple-800 dark:text-purple-300 text-xl font-bold">
+                      🗺️
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-black uppercase text-[#1A1A1A] dark:text-[#F3F4F6]">
+                        {t('about.module7Title', 'Stream Roadmaps & Flowchart')}
+                      </h3>
+                      <span className="text-[10px] font-mono font-bold bg-purple-100 text-purple-900 px-2 py-0.5 border border-purple-300 rounded">
+                        {t('about.module7Badge', 'PDF & Print Ready')}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-zinc-300 leading-relaxed font-semibold">
+                      {t('about.module7Desc', 'Step-by-step guidance from 10th standard through intermediate streams (MPC, BiPC, CEC, HEC), Polytechnic Diplomas, and University degrees. Features a responsive 4-step flowchart with career outcomes and PDF export capability.')}
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-dashed border-black/10 dark:border-white/10 flex items-center justify-between">
+                    <span className="text-[10px] font-mono font-bold text-purple-700 dark:text-purple-400 uppercase">
+                      {t('about.module7Tag', 'VISUAL PATHFINDING')}
+                    </span>
+                    <button
+                      onClick={() => { setSelectedNav('home'); setCurrentView('dashboard'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                      className="text-[11px] font-mono font-bold underline hover:text-purple-600 dark:hover:text-purple-400 cursor-pointer"
+                    >
+                      {t('about.module7Action', 'Explore ➔')}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Module 8: Curriculum Comparison Board */}
+                <div className="border-2 border-black dark:border-zinc-700 bg-white dark:bg-zinc-800 p-6 flex flex-col justify-between shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                  <div className="space-y-3">
+                    <div className="w-11 h-11 rounded-xl bg-orange-100 dark:bg-orange-900/40 border-2 border-black dark:border-zinc-700 flex items-center justify-center text-orange-800 dark:text-orange-300 text-xl font-bold">
+                      ⚖️
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-black uppercase text-[#1A1A1A] dark:text-[#F3F4F6]">
+                        {t('about.module8Title', 'Side-by-Side Comparison')}
+                      </h3>
+                      <span className="text-[10px] font-mono font-bold bg-orange-100 text-orange-900 px-2 py-0.5 border border-orange-300 rounded">
+                        {t('about.module8Badge', 'Dual Analysis')}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-zinc-300 leading-relaxed font-semibold">
+                      {t('about.module8Desc', 'Curriculum decision engine allowing students and parents to evaluate two academic tracks side-by-side. Compare syllabus weightage, semester difficulty, tuition cost differences, course duration, and contrasting placement potential.')}
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-dashed border-black/10 dark:border-white/10 flex items-center justify-between">
+                    <span className="text-[10px] font-mono font-bold text-orange-700 dark:text-orange-400 uppercase">
+                      {t('about.module8Tag', 'DECISION MATRIX')}
+                    </span>
+                    <button
+                      onClick={() => { setSelectedNav('home'); setCurrentView('dashboard'); setIsComparing(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                      className="text-[11px] font-mono font-bold underline hover:text-orange-600 dark:hover:text-orange-400 cursor-pointer"
+                    >
+                      {t('about.module8Action', 'Compare ➔')}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Module 9: AI Career Compass & Advisor */}
+                <div className="border-2 border-black dark:border-zinc-700 bg-white dark:bg-zinc-800 p-6 flex flex-col justify-between shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                  <div className="space-y-3">
+                    <div className="w-11 h-11 rounded-xl bg-teal-100 dark:bg-teal-900/40 border-2 border-black dark:border-zinc-700 flex items-center justify-center text-teal-800 dark:text-teal-300 text-xl font-bold">
+                      🤖
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-black uppercase text-[#1A1A1A] dark:text-[#F3F4F6]">
+                        {t('about.module9Title', 'AI Career Advisor')}
+                      </h3>
+                      <span className="text-[10px] font-mono font-bold bg-teal-100 text-teal-900 px-2 py-0.5 border border-teal-300 rounded">
+                        {t('about.module9Badge', 'Personalized')}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-zinc-300 leading-relaxed font-semibold">
+                      {t('about.module9Desc', 'Real-time AI counseling assistant factoring student academic background, interests, budget limitations, and geographic preferences to recommend the most optimal educational route and scholarship strategies.')}
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-dashed border-black/10 dark:border-white/10 flex items-center justify-between">
+                    <span className="text-[10px] font-mono font-bold text-teal-700 dark:text-teal-400 uppercase">
+                      {t('about.module9Tag', 'SMART ACADEMIC COUNSEL')}
+                    </span>
+                    <button
+                      onClick={() => { setSelectedNav('ai-advisor'); setCurrentView('ai-advisor'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                      className="text-[11px] font-mono font-bold underline hover:text-teal-600 dark:hover:text-teal-400 cursor-pointer"
+                    >
+                      {t('about.module9Action', 'Chat AI ➔')}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Module 10: Multilingual Regional Accessibility */}
+                <div className="border-2 border-black dark:border-zinc-700 bg-white dark:bg-zinc-800 p-6 flex flex-col justify-between shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                  <div className="space-y-3">
+                    <div className="w-11 h-11 rounded-xl bg-cyan-100 dark:bg-cyan-900/40 border-2 border-black dark:border-zinc-700 flex items-center justify-center text-cyan-800 dark:text-cyan-300 text-xl font-bold">
+                      🌐
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-black uppercase text-[#1A1A1A] dark:text-[#F3F4F6]">
+                        {t('about.module10Title', '4 Supported Languages')}
+                      </h3>
+                      <span className="text-[10px] font-mono font-bold bg-cyan-100 text-cyan-900 px-2 py-0.5 border border-cyan-300 rounded">
+                        {t('about.module10Badge', 'Full i18n')}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-zinc-300 leading-relaxed font-semibold">
+                      {t('about.module10Desc', 'Focused regional accessibility across English, Telugu (తెలుగు), Hindi (हिंदी), and Tamil (தமிழ்). Ensures students and parents can navigate academic streams, exams, scholarships, and career pathways comfortably in their preferred language.')}
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-dashed border-black/10 dark:border-white/10 flex items-center justify-between">
+                    <span className="text-[10px] font-mono font-bold text-cyan-700 dark:text-cyan-400 uppercase">
+                      {t('about.module10Tag', 'LINGUISTIC EQUALITY')}
+                    </span>
+                    <span className="text-[11px] font-mono font-bold text-gray-500">
+                      {t('about.module10Action', 'Header Switcher')}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Module 11: Alumni Course Survival Reviews */}
+                <div className="border-2 border-black dark:border-zinc-700 bg-white dark:bg-zinc-800 p-6 flex flex-col justify-between shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                  <div className="space-y-3">
+                    <div className="w-11 h-11 rounded-xl bg-yellow-100 dark:bg-yellow-900/40 border-2 border-black dark:border-zinc-700 flex items-center justify-center text-yellow-800 dark:text-yellow-300 text-xl font-bold">
+                      ⭐
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-black uppercase text-[#1A1A1A] dark:text-[#F3F4F6]">
+                        {t('about.module11Title', 'Alumni Course Reviews')}
+                      </h3>
+                      <span className="text-[10px] font-mono font-bold bg-yellow-100 text-yellow-900 px-2 py-0.5 border border-yellow-300 rounded">
+                        {t('about.module11Badge', 'Unfiltered')}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-zinc-300 leading-relaxed font-semibold">
+                      {t('about.module11Desc', 'Raw ratings and survival insights written by senior students and graduates. Honest appraisals of syllabus toughness, internal lab markings, campus facilities, and actual placement statistics.')}
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-dashed border-black/10 dark:border-white/10 flex items-center justify-between">
+                    <span className="text-[10px] font-mono font-bold text-yellow-700 dark:text-yellow-400 uppercase">
+                      {t('about.module11Tag', 'PEER TRUTH & EXPERIENCES')}
+                    </span>
+                    <button
+                      onClick={() => { setSelectedNav('insights'); setCurrentView('insights'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                      className="text-[11px] font-mono font-bold underline hover:text-yellow-600 dark:hover:text-yellow-400 cursor-pointer"
+                    >
+                      {t('about.module11Action', 'Reviews ➔')}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Module 12: Modern Neo-Brutalist Design */}
+                <div className="border-2 border-black dark:border-zinc-700 bg-white dark:bg-zinc-800 p-6 flex flex-col justify-between shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                  <div className="space-y-3">
+                    <div className="w-11 h-11 rounded-xl bg-stone-100 dark:bg-zinc-700 border-2 border-black dark:border-zinc-700 flex items-center justify-center text-black dark:text-white text-xl font-bold">
+                      🎨
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-black uppercase text-[#1A1A1A] dark:text-[#F3F4F6]">
+                        {t('about.module12Title', 'Neo-Brutalist & Dark Mode')}
+                      </h3>
+                      <span className="text-[10px] font-mono font-bold bg-stone-200 text-stone-900 px-2 py-0.5 border border-stone-400 rounded">
+                        {t('about.module12Badge', 'Mobile-Optimized')}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-zinc-300 leading-relaxed font-semibold">
+                      {t('about.module12Desc', 'High-contrast, distraction-free interface built with bold geometric borders and accessible typography. Features instantaneous light/dark mode theming and a 100% fluid mobile layout for smartphones and tablets.')}
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-dashed border-black/10 dark:border-white/10 flex items-center justify-between">
+                    <span className="text-[10px] font-mono font-bold text-stone-700 dark:text-zinc-400 uppercase">
+                      {t('about.module12Tag', 'ACCESSIBLE ARCHITECTURE')}
+                    </span>
+                    <span className="text-[11px] font-mono font-bold text-gray-500">
+                      {t('about.module12Action', 'Adaptive UI')}
+                    </span>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            {/* Platform Evolution & Engineering Milestones Roadmap */}
+            <div className="border-2 border-black dark:border-zinc-700 bg-white dark:bg-zinc-900 p-6 sm:p-8 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+              <div className="border-b-2 border-black dark:border-zinc-700 pb-4 mb-6">
+                <span className="text-xs font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest block font-mono">
+                  {t('about.evolutionTag', 'OUR DEVELOPMENT JOURNEY')}
+                </span>
+                <h2 className="text-2xl sm:text-3xl font-display font-black uppercase text-[#1A1A1A] dark:text-[#F3F4F6] mt-1">
+                  {t('about.evolutionTitle', 'How DIRPA Evolved')}
+                </h2>
+                <p className="text-xs text-gray-500 dark:text-zinc-400 mt-1">
+                  {t('about.evolutionDesc', "From an interactive stream flowchart into India's most comprehensive student academic navigator.")}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-4 bg-[#FAF9F5] dark:bg-zinc-800 border-2 border-black dark:border-zinc-700 space-y-2">
+                  <span className="text-[10px] font-mono font-bold text-blue-600 dark:text-blue-400 uppercase">// PHASE 01</span>
+                  <h4 className="text-sm font-black uppercase text-black dark:text-white">{t('about.phase1Title', 'Pathways & Streams')}</h4>
+                  <p className="text-xs text-gray-600 dark:text-zinc-300 font-semibold">
+                    {t('about.phase1Desc', 'Interactive roadmap mapping 10th to 12th groups (MPC, BiPC, CEC, HEC), Polytechnic, and degree outlets.')}
+                  </p>
+                </div>
+
+                <div className="p-4 bg-[#FAF9F5] dark:bg-zinc-800 border-2 border-black dark:border-zinc-700 space-y-2">
+                  <span className="text-[10px] font-mono font-bold text-rose-600 dark:text-rose-400 uppercase">// PHASE 02</span>
+                  <h4 className="text-sm font-black uppercase text-black dark:text-white">{t('about.phase2Title', 'Exams & Scholarships')}</h4>
+                  <p className="text-xs text-gray-600 dark:text-zinc-300 font-semibold">
+                    {t('about.phase2Desc', 'Added verified national/state scholarships (NSP/ePASS) and national entrance exam syllabus hubs.')}
+                  </p>
+                </div>
+
+                <div className="p-4 bg-[#FAF9F5] dark:bg-zinc-800 border-2 border-black dark:border-zinc-700 space-y-2">
+                  <span className="text-[10px] font-mono font-bold text-purple-600 dark:text-purple-400 uppercase">// PHASE 03</span>
+                  <h4 className="text-sm font-black uppercase text-black dark:text-white">{t('about.phase3Title', 'Alumni & Messages')}</h4>
+                  <p className="text-xs text-gray-600 dark:text-zinc-300 font-semibold">
+                    {t('about.phase3Desc', 'Integrated verified alumni network with real-time 1-on-1 messaging and course survival ratings.')}
+                  </p>
+                </div>
+
+                <div className="p-4 bg-[#FAF9F5] dark:bg-zinc-800 border-2 border-black dark:border-zinc-700 space-y-2">
+                  <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400 uppercase">// PHASE 04</span>
+                  <h4 className="text-sm font-black uppercase text-black dark:text-white">{t('about.phase4Title', 'Companies & Salary')}</h4>
+                  <p className="text-xs text-gray-600 dark:text-zinc-300 font-semibold">
+                    {t('about.phase4Desc', 'Incorporated top employer dossiers, alumni interview insights, and dual INR ₹ & USD $ compensation data.')}
+                  </p>
+                </div>
+
+                <div className="p-4 bg-[#FAF9F5] dark:bg-zinc-800 border-2 border-black dark:border-zinc-700 space-y-2">
+                  <span className="text-[10px] font-mono font-bold text-amber-600 dark:text-amber-400 uppercase">// PHASE 05</span>
+                  <h4 className="text-sm font-black uppercase text-black dark:text-white">{t('about.phase5Title', '4 Regional Languages')}</h4>
+                  <p className="text-xs text-gray-600 dark:text-zinc-300 font-semibold">
+                    {t('about.phase5Desc', 'Built dedicated multilingual localization across English, Telugu, Hindi, and Tamil.')}
+                  </p>
+                </div>
+
+                <div className="p-4 bg-[#FAF9F5] dark:bg-zinc-800 border-2 border-black dark:border-zinc-700 space-y-2">
+                  <span className="text-[10px] font-mono font-bold text-teal-600 dark:text-teal-400 uppercase">// PHASE 06</span>
+                  <h4 className="text-sm font-black uppercase text-black dark:text-white">{t('about.phase6Title', 'DIRPA Bullets Feed')}</h4>
+                  <p className="text-xs text-gray-600 dark:text-zinc-300 font-semibold">
+                    {t('about.phase6Desc', 'Launched fast micro-learning feed with high-yield exam tricks, scholarship alerts, and study hacks.')}
+                  </p>
+                </div>
+
+                <div className="p-4 bg-[#FAF9F5] dark:bg-zinc-800 border-2 border-black dark:border-zinc-700 space-y-2">
+                  <span className="text-[10px] font-mono font-bold text-lime-600 dark:text-lime-400 uppercase">// PHASE 07</span>
+                  <h4 className="text-sm font-black uppercase text-black dark:text-white">{t('about.phase7Title', 'DIRPA Stuff Marketplace')}</h4>
+                  <p className="text-xs text-gray-600 dark:text-zinc-300 font-semibold">
+                    {t('about.phase7Desc', 'Introduced student resource hub for sharing free textbooks, lecture notes, calculators, and lab tools.')}
+                  </p>
+                </div>
+
+                <div className="p-4 bg-[#FAF9F5] dark:bg-zinc-800 border-2 border-black dark:border-zinc-700 space-y-2">
+                  <span className="text-[10px] font-mono font-bold text-orange-600 dark:text-orange-400 uppercase">// PHASE 08</span>
+                  <h4 className="text-sm font-black uppercase text-black dark:text-white">{t('about.phase8Title', 'Comparison & Mobile UX')}</h4>
+                  <p className="text-xs text-gray-600 dark:text-zinc-300 font-semibold">
+                    {t('about.phase8Desc', 'Added side-by-side stream comparison, print flowchart exporter, and comprehensive mobile layout optimizations.')}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Student-First Guiding Principles */}
+            <div className="border-2 border-black dark:border-zinc-700 bg-amber-50 dark:bg-zinc-850 p-6 sm:p-8 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+              <div className="border-b-2 border-black dark:border-zinc-700 pb-3 mb-6">
+                <span className="text-xs font-black text-stone-700 dark:text-zinc-300 uppercase tracking-widest font-mono">
+                  {t('about.ourPledgeToStudents', 'OUR PLEDGE TO STUDENTS')}
+                </span>
+                <h3 className="text-2xl font-display font-black uppercase text-black dark:text-white mt-1">
+                  {t('about.dirpaManifesto', 'The DIRPA Manifesto')}
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs sm:text-sm font-semibold text-stone-800 dark:text-zinc-200">
+                <div className="space-y-2">
+                  <div className="text-lg">{t('about.unbiasedTitle', '🚫 100% Unbiased & Non-Commercial')}</div>
+                  <p className="text-xs leading-relaxed text-stone-600 dark:text-zinc-400">
+                    {t('about.unbiasedDesc', 'We never accept sponsorships from private colleges or charge referral commissions. Every roadmap, fee estimate, and curriculum breakdown is selected purely for student benefit.')}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <div className="text-lg">{t('about.alumniTruthTitle', '🎯 Raw Alumni Truth')}</div>
+                  <p className="text-xs leading-relaxed text-stone-600 dark:text-zinc-400">
+                    {t('about.alumniTruthDesc', 'Real students and graduates share candid experiences on subject hardness, grading curves, internal laboratory markings, and true placement packages.')}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <div className="text-lg">{t('about.democratizingTitle', '🌏 Democratizing Opportunities')}</div>
+                  <p className="text-xs leading-relaxed text-stone-600 dark:text-zinc-400">
+                    {t('about.democratizingDesc', 'Whether a student is in a remote village or a metro city, DIRPA delivers the exact same tier-1 counseling tools, exam patterns, and scholarship links free of cost.')}
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -13521,7 +13868,7 @@ export default function App() {
             <div className="border-2 border-black dark:border-zinc-700 bg-white dark:bg-zinc-900 p-6 md:p-8 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
               <div className="border-b-2 border-black dark:border-zinc-700 pb-4 mb-8">
                 <span className="text-xs font-black text-rose-600 dark:text-rose-400 uppercase tracking-widest block font-mono">EXECUTIVE LEADERSHIP</span>
-                <h2 className="text-3xl font-display font-black uppercase text-[#1A1A1A] dark:text-[#F3F4F6] mt-1.0">
+                <h2 className="text-2xl sm:text-3xl font-display font-black uppercase text-[#1A1A1A] dark:text-[#F3F4F6] mt-1">
                   {t('about.teamTitle', 'Meet Our Co-Founders')}
                 </h2>
                 <p className="text-xs text-gray-500 dark:text-zinc-400 mt-1">
@@ -13539,10 +13886,10 @@ export default function App() {
                     </div>
                     <div>
                       <h4 className="text-md font-black text-[#1A1A1A] dark:text-[#F3F4F6] uppercase">Yagna Narayana</h4>
-                      <p className="text-[9.5px] font-black text-indigo-700 dark:text-indigo-400 uppercase tracking-wider font-mono">Co-Founder & Chief Product Officer</p>
+                      <p className="text-[9.5px] font-black text-indigo-700 dark:text-indigo-400 uppercase tracking-wider font-mono">{t('about.yagnaRole', 'Co-Founder & Chief Product Officer')}</p>
                     </div>
                     <p className="text-xs text-gray-600 dark:text-zinc-300 leading-relaxed font-semibold">
-                      Architects interactive visual designs, path mapping algorithms, and student experience pipelines.
+                      {t('about.yagnaBio', 'Architects interactive visual designs, path mapping algorithms, student experience pipelines, and cross-platform feature ecosystems.')}
                     </p>
                   </div>
                   <div className="flex gap-2 mt-5 pt-3 border-t border-dashed border-black/10 dark:border-white/10">
@@ -13573,10 +13920,10 @@ export default function App() {
                     </div>
                     <div>
                       <h4 className="text-md font-black text-[#1A1A1A] dark:text-[#F3F4F6] uppercase">Harika</h4>
-                      <p className="text-[9.5px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider font-mono">Co-Founder & Chief Technology Officer</p>
+                      <p className="text-[9.5px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider font-mono">{t('about.harikaRole', 'Co-Founder & Chief Technology Officer')}</p>
                     </div>
                     <p className="text-xs text-gray-600 dark:text-zinc-300 leading-relaxed font-semibold">
-                      Architects secure database structures, backend sync components, and cloud services scaling.
+                      {t('about.harikaBio', 'Architects secure database structures, backend synchronization components, and cloud services scaling for high-concurrency access.')}
                     </p>
                   </div>
                   <div className="flex gap-2 mt-5 pt-3 border-t border-dashed border-black/10 dark:border-white/10">
@@ -13607,10 +13954,10 @@ export default function App() {
                     </div>
                     <div>
                       <h4 className="text-md font-black text-[#1A1A1A] dark:text-[#F3F4F6] uppercase">Sri Anjani</h4>
-                      <p className="text-[9.5px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider font-mono">Co-Founder & Head of Partnerships</p>
+                      <p className="text-[9.5px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider font-mono">{t('about.sriAnjaniRole', 'Co-Founder & Head of Partnerships')}</p>
                     </div>
                     <p className="text-xs text-gray-600 dark:text-zinc-300 leading-relaxed font-semibold">
-                      Coordinates corporate relationships, university alignments, and outreach to schools.
+                      {t('about.sriAnjaniBio', 'Coordinates corporate relationships, university alignments, scholarship partner onboarding, and educational outreach to schools.')}
                     </p>
                   </div>
                   <div className="flex gap-2 mt-5 pt-3 border-t border-dashed border-black/10 dark:border-white/10">
@@ -13639,10 +13986,10 @@ export default function App() {
                     </div>
                     <div>
                       <h4 className="text-md font-black text-[#1A1A1A] dark:text-[#F3F4F6] uppercase">Nikhil</h4>
-                      <p className="text-[9.5px] font-black text-rose-600 dark:text-rose-455 uppercase tracking-wider font-mono">Co-Founder & Lead Consultant</p>
+                      <p className="text-[9.5px] font-black text-rose-600 dark:text-rose-400 uppercase tracking-wider font-mono">{t('about.nikhilRole', 'Co-Founder & Lead Consultant')}</p>
                     </div>
-                    <p className="text-xs text-gray-650 dark:text-zinc-300 leading-relaxed font-semibold">
-                      Validates counseling frameworks, career placement data modeling, and advisory maps.
+                    <p className="text-xs text-gray-600 dark:text-zinc-300 leading-relaxed font-semibold">
+                      {t('about.nikhilBio', 'Validates counseling frameworks, career placement data modeling, entrance exam curricula, and comprehensive advisory maps.')}
                     </p>
                   </div>
                   <div className="flex gap-2 mt-5 pt-3 border-t border-dashed border-black/10 dark:border-white/10">
@@ -14337,7 +14684,7 @@ export default function App() {
                   {/* STYLIZED HIGH-CONTRAST NEOBRUTALIST DASHBOARD: LIKES & FOLLOWERS */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {/* Stat Card 1: Likes */}
-                    <div className="relative border-4 border-black bg-rose-50 p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all flex flex-col justify-between overflow-hidden">
+                    <div className="w-full relative border-4 border-black bg-rose-50 p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all flex flex-col justify-between overflow-hidden">
                       <div className="absolute -bottom-2 -right-4 text-rose-500/10 pointer-events-none">
                         <Heart className="w-24 h-24 stroke-1 fill-rose-500/5" />
                       </div>
@@ -14360,7 +14707,7 @@ export default function App() {
                     </div>
 
                     {/* Stat Card 2: Followers */}
-                    <div className="relative border-4 border-black bg-blue-50 p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all flex flex-col justify-between overflow-hidden">
+                    <div className="w-full relative border-4 border-black bg-blue-50 p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all flex flex-col justify-between overflow-hidden">
                       <div className="absolute -bottom-2 -right-4 text-blue-500/10 pointer-events-none">
                         <Users className="w-24 h-24 stroke-1 fill-blue-500/5" />
                       </div>
@@ -15694,7 +16041,7 @@ export default function App() {
                   {marqueeList.map((item, index) => (
                     <div
                       key={`${item.id}-${index}`}
-                      className="w-[300px] sm:w-[360px] shrink-0 bg-white dark:bg-zinc-900 rounded-xl border border-stone-200 dark:border-zinc-800 p-5 shadow-md hover:shadow-xl transition-all flex flex-col justify-between"
+                      className="w-[270px] sm:w-[340px] md:w-[360px] shrink-0 bg-white dark:bg-zinc-900 rounded-xl border border-stone-200 dark:border-zinc-800 p-4 sm:p-5 shadow-md hover:shadow-xl transition-all flex flex-col justify-between"
                     >
                       <div>
                         {/* Card Header */}
@@ -15751,7 +16098,7 @@ export default function App() {
       {((!user && currentView === 'landing') || (user && currentView === 'dashboard' && !selectedPathway && searchMethod === 'none')) && (
         <div className="w-full bg-white dark:bg-zinc-950 border-t-2 border-black text-left mt-12 font-sans shrink-0">
         {/* TOP BANNER SECTION (White / Light Background with Lime/Yellow Circle Arrow Button) */}
-        <div className="max-w-7xl mx-auto px-6 sm:px-12 py-10 md:py-16 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border-b-2 border-black relative">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 md:px-12 py-8 md:py-16 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border-b-2 border-black relative">
           
           {/* Left Sub-eyebrow + Main Heading */}
           <div className="space-y-3 max-w-2xl">
@@ -15764,7 +16111,7 @@ export default function App() {
               </span>
             </div>
 
-            <h2 className="text-4xl sm:text-5xl md:text-6xl font-display font-black uppercase text-black dark:text-white tracking-tight leading-none">
+            <h2 className="text-3xl sm:text-5xl md:text-6xl font-display font-black uppercase text-black dark:text-white tracking-tight leading-none">
               Contact <span className="relative inline-block border-b-4 border-lime-400 dark:border-lime-400 pb-0.5">us</span>
             </h2>
             <p className="text-xs sm:text-sm text-stone-600 dark:text-zinc-400 font-medium max-w-lg leading-relaxed">
@@ -15776,17 +16123,17 @@ export default function App() {
           <div className="flex items-center gap-4 shrink-0">
             <a 
               href="mailto:dirpa@ai.gmail.com"
-              className="group relative w-16 h-16 sm:w-20 sm:h-20 bg-lime-400 hover:bg-lime-300 dark:bg-lime-400 dark:hover:bg-lime-300 text-black rounded-full border-2 sm:border-3 border-black flex items-center justify-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:scale-105 active:scale-95 transition-all cursor-pointer shrink-0"
+              className="group relative w-14 h-14 sm:w-20 sm:h-20 bg-lime-400 hover:bg-lime-300 dark:bg-lime-400 dark:hover:bg-lime-300 text-black rounded-full border-2 sm:border-3 border-black flex items-center justify-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:scale-105 active:scale-95 transition-all cursor-pointer shrink-0"
               title="Send Email to DIRPA"
             >
-              <ArrowRight className="w-8 h-8 sm:w-10 sm:h-10 text-black transform group-hover:translate-x-1 transition-transform" />
+              <ArrowRight className="w-7 h-7 sm:w-10 sm:h-10 text-black transform group-hover:translate-x-1 transition-transform" />
             </a>
           </div>
 
         </div>
 
         {/* BOTTOM MAIN FOOTER BLOCK (Black / Dark Slate Background) */}
-        <div className="bg-stone-900 dark:bg-black text-stone-100 py-12 md:py-16 px-6 sm:px-12 md:px-16 border-b-2 border-black">
+        <div className="bg-stone-900 dark:bg-black text-stone-100 py-10 md:py-16 px-4 sm:px-8 md:px-16 border-b-2 border-black">
           <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 md:gap-8">
             
             {/* COLUMN 1: BRAND STATEMENT (Lg: col-span-4) */}

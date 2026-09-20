@@ -84,7 +84,7 @@ export default function LandingAnimation({ onComplete }: LandingAnimationProps) 
           <button
             type="button"
             onClick={handleSkip}
-            className="absolute top-6 right-6 z-50 px-4 py-2 bg-black text-amber-300 border-2 border-black font-mono font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-[3px_3px_0px_0px_rgba(245,158,11,1)] hover:bg-zinc-800 active:translate-x-0.5 active:translate-y-0.5 cursor-pointer transition-all"
+            className="absolute top-4 right-4 sm:top-6 sm:right-6 z-50 px-3 py-1.5 sm:px-4 sm:py-2 bg-black text-amber-300 border-2 border-black font-mono font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 sm:gap-2 shadow-[2px_2px_0px_0px_rgba(245,158,11,1)] sm:shadow-[3px_3px_0px_0px_rgba(245,158,11,1)] hover:bg-zinc-800 active:translate-x-0.5 active:translate-y-0.5 cursor-pointer transition-all"
             title="Skip intro animation"
           >
             <span>Skip Intro</span>
@@ -160,22 +160,22 @@ export default function LandingAnimation({ onComplete }: LandingAnimationProps) 
             <AnimatePresence>
               {stage !== 'curtain-wipe' && (
                 <motion.div
-                  initial={{ boxShadow: '12px 12px 0px 0px rgba(0,0,0,1)', scale: 0.95 }}
+                  initial={{ boxShadow: '6px 6px 0px 0px rgba(0,0,0,1)', scale: 0.95 }}
                   animate={{ 
                     scale: 1, 
-                    boxShadow: stage === 'enter-dirpa' ? '12px 12px 0px 0px rgba(0,0,0,1)' : '6px 6px 0px 0px rgba(0,0,0,1)'
+                    boxShadow: stage === 'enter-dirpa' ? '6px 6px 0px 0px rgba(0,0,0,1)' : '4px 4px 0px 0px rgba(0,0,0,1)'
                   }}
                   exit={{ scale: 0.8, opacity: 0, transition: { duration: 0.3 } }}
-                  className="relative p-8 md:p-14 max-w-3xl w-full border-4 border-black bg-amber-50 rounded-none text-center overflow-hidden flex flex-col items-center justify-center min-h-[420px]"
+                  className="relative p-5 sm:p-8 md:p-12 max-w-3xl w-full border-2 sm:border-4 border-black bg-amber-50 rounded-none text-center overflow-hidden flex flex-col items-center justify-center min-h-[360px] sm:min-h-[420px]"
                 >
                   {/* Retro Corner Badges */}
-                  <div className="absolute top-4 left-4 flex gap-1.5 z-10">
-                    <span className="w-3 h-3 rounded-full bg-red-500 border border-black animate-pulse"></span>
-                    <span className="w-3 h-3 rounded-full bg-yellow-400 border border-black"></span>
-                    <span className="w-3 h-3 rounded-full bg-green-500 border border-black"></span>
+                  <div className="absolute top-3 left-3 sm:top-4 sm:left-4 flex gap-1.5 z-10">
+                    <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-red-500 border border-black animate-pulse"></span>
+                    <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-yellow-400 border border-black"></span>
+                    <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-green-500 border border-black"></span>
                   </div>
 
-                  <div className="absolute top-4 right-4 font-mono font-extrabold text-[10px] text-zinc-640 uppercase tracking-widest bg-zinc-200/80 px-2 py-0.5 border border-black rounded-none">
+                  <div className="absolute top-3 right-3 sm:top-4 sm:right-4 font-mono font-extrabold text-[9px] sm:text-[10px] text-zinc-640 uppercase tracking-widest bg-zinc-200/80 px-2 py-0.5 border border-black rounded-none">
                     ENGINE_V2_ONLINE
                   </div>
 
@@ -192,10 +192,10 @@ export default function LandingAnimation({ onComplete }: LandingAnimationProps) 
                         opacity: 1,
                         y: 0
                       } : {
-                        scale: 0.7,
+                        scale: 0.75,
                         rotate: -2,
                         opacity: 1,
-                        y: -110
+                        y: -85
                       }}
                       transition={{
                         type: "spring",
@@ -203,9 +203,9 @@ export default function LandingAnimation({ onComplete }: LandingAnimationProps) 
                         damping: 18,
                         layout: { duration: 0.55, ease: "easeInOut" }
                       }}
-                      className="absolute z-10 bg-white border-4 border-black px-6 py-4 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center cursor-pointer min-w-[240px]"
+                      className="absolute z-10 bg-white border-2 sm:border-4 border-black px-4 py-3 sm:px-6 sm:py-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] sm:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center cursor-pointer max-w-full"
                     >
-                      <DirpaLogo styleName={getActiveLogoStyle()} variant="full" size={stage === 'enter-dirpa' ? 'lg' : 'md'} animate={true} />
+                      <DirpaLogo styleName={getActiveLogoStyle()} variant="full" size="md" animate={true} />
                     </motion.div>
 
                     {/* Sub-label for DIRPA at the very beginning */}
@@ -214,13 +214,11 @@ export default function LandingAnimation({ onComplete }: LandingAnimationProps) 
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.7 }}
-                        className="mt-40 flex flex-col items-center gap-2"
+                        className="mt-32 sm:mt-40 flex flex-col items-center gap-2"
                       >
-                        <span className="px-3 py-1 bg-stone-900 text-amber-300 font-mono text-[10.5px] font-bold tracking-widest uppercase border border-black">
+                        <span className="px-3 py-1 bg-stone-900 text-amber-300 font-mono text-[9px] sm:text-[10.5px] font-bold tracking-widest uppercase border border-black text-center">
                           Dynamic Academic Roadmap Router
                         </span>
-                        
-                        
                       </motion.div>
                     )}
 
@@ -229,24 +227,24 @@ export default function LandingAnimation({ onComplete }: LandingAnimationProps) 
                       {stage === 'minimize-reveal' && (
                         <motion.div
                           initial={{ opacity: 0, scale: 0.85, y: 30 }}
-                          animate={{ opacity: 1, scale: 1, y: 70 }}
+                          animate={{ opacity: 1, scale: 1, y: 55 }}
                           exit={{ opacity: 0, y: 40 }}
                           transition={{ type: "spring", stiffness: 120, damping: 14, delay: 0.1 }}
-                          className="w-full flex flex-col items-center"
+                          className="w-full flex flex-col items-center px-1"
                         >
                           {/* Spectacular banner showing path statement */}
-                          <div className="bg-yellow-100 border-2 border-black p-6 md:p-8 rounded-none shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] relative max-w-xl">
+                          <div className="bg-yellow-100 border-2 border-black p-4 sm:p-6 md:p-8 rounded-none shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] sm:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] relative max-w-xl w-full">
                             
                             {/* Little badge ornament */}
-                            <div className="absolute -top-4 -right-4 w-9 h-9 bg-[#2563EB] text-white border-2 border-black rounded-none flex items-center justify-center rotate-12">
-                              <Sparkles className="w-4 h-4" />
+                            <div className="absolute -top-3 -right-3 sm:-top-4 sm:-right-4 w-7 h-7 sm:w-9 sm:h-9 bg-[#2563EB] text-white border-2 border-black rounded-none flex items-center justify-center rotate-12">
+                              <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             </div>
 
                             <motion.h1
                               initial={{ opacity: 0, y: 15 }}
                               animate={{ opacity: 1, y: 0 }}
                               transition={{ delay: 0.3, duration: 0.4 }}
-                              className="text-3xl md:text-5xl font-display font-black uppercase text-black tracking-tight leading-none"
+                              className="text-2xl sm:text-3xl md:text-5xl font-display font-black uppercase text-black tracking-tight leading-none"
                             >
                               Discover your path!
                             </motion.h1>

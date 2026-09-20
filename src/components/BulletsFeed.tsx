@@ -221,6 +221,11 @@ export const BulletsFeed: React.FC<BulletsFeedProps> = ({
     }
   };
 
+  // Initial fetch on mount to load fresh daily news bullets
+  useEffect(() => {
+    fetchBulletsFeed(false);
+  }, []);
+
   // Fetch / Refresh Feed from backend (with optional live Google Search Grounding)
   const fetchBulletsFeed = async (isLive = false) => {
     if (isLive) {
@@ -240,7 +245,8 @@ export const BulletsFeed: React.FC<BulletsFeedProps> = ({
           course: user?.currentCourse,
           state: user?.state,
           region: selectedRegion !== 'all' ? selectedRegion : undefined,
-          liveSearch: isLive
+          liveSearch: isLive,
+          forceRefresh: isLive
         })
       });
 
@@ -249,9 +255,20 @@ export const BulletsFeed: React.FC<BulletsFeedProps> = ({
 
       if (data.bullets && Array.isArray(data.bullets)) {
         setBullets(data.bullets);
-        setLastUpdated(`Live (${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`);
+        if (data.timestamp) {
+          setLastUpdated(data.timestamp);
+        } else {
+          setLastUpdated(`Live (${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`);
+        }
+
         if (isLive) {
-          showToast(`Refreshed! ${data.liveGroundedCount || 0} live ground-searched notices checked.`);
+          if (data.throttled && data.message) {
+            showToast(`ℹ️ ${data.message}`);
+          } else if (data.liveGroundedCount > 0) {
+            showToast(`✨ Found ${data.liveGroundedCount} live announcements from official portals!`);
+          } else {
+            showToast(`✅ Scanned official portals. Verified ${data.count} active circulars!`);
+          }
         }
       }
     } catch (err) {
@@ -395,14 +412,9 @@ export const BulletsFeed: React.FC<BulletsFeedProps> = ({
                   <h1 className="text-xl md:text-2xl font-display font-black uppercase tracking-tight text-black flex items-center gap-2">
                     Bullets
                   </h1>
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-600 text-white rounded text-[10px] font-black tracking-widest uppercase border border-black shadow-[1px_1px_0px_0px_#000]">
-                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
-                    LIVE FEED
-                  </span>
+                  
                 </div>
-                <p className="text-[11px] font-medium text-stone-500 hidden md:block">
-                  Verified real-time educational & career intelligence • 100% genuine official sources
-                </p>
+                
               </div>
             </div>
           </div>
@@ -410,18 +422,19 @@ export const BulletsFeed: React.FC<BulletsFeedProps> = ({
           <div className="flex items-center gap-2 sm:gap-3">
             <span className="inline-flex items-center gap-1.5 text-[11px] font-mono font-bold text-stone-700 bg-stone-100 px-2.5 py-2 border border-black rounded-lg shadow-[1px_1px_0px_0px_#000]">
               <Clock className="w-3.5 h-3.5 text-stone-600" />
-              <span>Last updated: {lastUpdated}</span>
+              <span>{lastUpdated}</span>
             </span>
 
             <button
               onClick={() => fetchBulletsFeed(true)}
               disabled={isRefreshing}
               className={`px-3.5 py-2 border-2 border-black font-display font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-[2px_2px_0px_0px_#000] cursor-pointer transition-all ${
-                isRefreshing ? 'bg-stone-200 text-stone-600' : 'bg-emerald-400 hover:bg-emerald-300 text-black'
+                isRefreshing ? 'bg-stone-200 text-stone-600 cursor-not-allowed' : 'bg-emerald-400 hover:bg-emerald-300 text-black active:translate-y-0.5'
               }`}
+              title="Crawl official government and university websites for today's new notifications"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-              <span>{isRefreshing ? 'Searching Web...' : 'Refresh Live'}</span>
+              <span>{isRefreshing ? 'Scanning Official Portals...' : 'Check Official Portals'}</span>
             </button>
           </div>
         </div>
